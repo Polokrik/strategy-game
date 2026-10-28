@@ -86,3 +86,21 @@ Hors MVP : époques, civilisation, automatisation, PC long, monde complet, tutor
 - Quel twist de bataille pour le prototype ?
 - Stack technique (web/canvas pour prototyper, puis moteur ?) à choisir au début du repo.
 - Modèle économique final.
+
+
+---
+
+## Décisions de design, itération 2 (style et renforts automatiques)
+
+### Style
+Direction fixée : lisibilité type State.io sur la carte, charme cartoon type Civilization dans l'habillage. Détail, tokens et emprunts : `docs/STYLE.md`. Aucune monétisation reprise des références (pubs, gemmes, packs, vidéo contre récompense).
+
+### Renforts automatiques (demande de Paul)
+**Spécification** : un territoire de l'arrière (aucun voisin qui ne soit pas au joueur) qui atteint le seuil choisi (**10, 20 ou 30**, ou désactivé) envoie toutes ses troupes sauf une vers le front le plus proche, en passant par les territoires du joueur. Passage toutes les secondes. Le passif ne choisit jamais d'attaquer. Réservé au joueur, comme les jokers. Introduit par un chapitre dédié (« Renforts »), puis disponible aux chapitres suivants.
+
+**Écart avec ce document** : la phase 5 prévoyait l'automatisation débloquée par la technologie, avec un plafond, et la décrivait comme « mécanique de stratégie, pas confort qui joue à la place du joueur ». Elle est ici avancée avant la campagne, sans plafond autre que le seuil.
+
+**Prémisse faible mesurée** : sur 20 parties par case avec un joueur qui décide toutes les 6 s, les renforts font passer la victoire de 25-35 % à **95 % au seuil 10** (70-80 % à 30). Le seuil n'est donc pas une vraie décision (10 domine), et la fonction rend les chapitres 4 à 6 faciles. Un coût fixe de 2 ou 3 troupes par convoi ne change pas ce constat (écart dans le bruit). À trancher : assistant de confort assumé (alors on durcit les IA quand il est actif) ou mécanique de stratégie bornée (alors plafond de convois simultanés, ou seuil lié à un choix de coût réel).
+
+### Jokers (phase 3), rappel
+Le patron de fiche de commandant des références (compétence, % de garnison, cibles, temps de recharge, niveau) convient à l'écran des jokers. Le design actuel les fait gagner à la jauge et non par recharge ; à choisir à la phase 3.

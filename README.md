@@ -6,6 +6,10 @@ Les batailles se jouent sur une **carte de territoires** façon mappemonde : des
 
 **Twist du prototype : les troupes sont interceptables en transit.** Deux troupes ennemies qui se croisent sur la même frontière s'annulent, la plus grosse survit diminuée (un flash marque le choc). Seule la frontière compte, pas la géométrie : deux trajets qui se croisent à l'écran sans partager de frontière ne s'interceptent pas.
 
+## Style
+
+Lisibilité State.io sur la carte, charme cartoon type Civilization dans l'habillage. Voir `docs/STYLE.md`. Troupes en flux de points, paliers de territoire en amas de disques, barre de répartition des territoires.
+
 ## Garde-fous anti-boule de neige
 
 - **Fatigue d'empire** : au-delà de 4 territoires, chaque territoire produit un peu moins (pour tout le monde).
@@ -18,8 +22,9 @@ Les batailles se jouent sur une **carte de territoires** façon mappemonde : des
 1. Premiers pas : glisser, capturer. 1 IA défensive.
 2. Traversées : îles et traversées maritimes. 1 IA défensive.
 3. Interception : 1 IA agressive.
-4. Deux adversaires : opportuniste + défensive.
-5. Trois adversaires : agressive + opportuniste + défensive.
+4. Renforts : renforts automatiques (seuil 10 / 20 / 30). 1 IA opportuniste.
+5. Deux adversaires : opportuniste + défensive.
+6. Trois adversaires : agressive + opportuniste + défensive.
 
 Trois personnalités d'IA, même moteur, paramètres différents (`src/engine/ai.ts`). Chaque chapitre introduit une seule notion.
 
@@ -38,8 +43,9 @@ npm run build
   - `sim.ts` règles : production, envoi, arrivée, interception, fatigue, prolongation, victoire
   - `mapgen.ts` génère les cartes de territoires (Voronoï, mers, îles)
   - `ai.ts` IA paramétrable : personnalités, attaques coordonnées sur une même cible
+  - `auto.ts` renforts automatiques
   - `level.ts` chapitres, cartes, handicaps de difficulté
-- `src/main.ts` : menu, rendu canvas, entrée tactile (pointer events), boucle à pas fixe.
+- `src/main.ts` : écrans, entrée tactile (pointer events), boucle à pas fixe. `src/render.ts` : dessin de la carte. `src/theme.ts` : tokens de style. `src/hero.ts` : mascotte et confettis.
 
 ## Stack
 

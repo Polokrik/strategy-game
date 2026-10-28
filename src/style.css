@@ -1,12 +1,21 @@
+/* Habillage de l'interface. Les variables (--ink, --green-400, --owner-1…) viennent de theme.ts. */
+
+* {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
 html,
 body {
   margin: 0;
   height: 100%;
-  background: #0f1420;
-  color: #e8ecf4;
-  font-family: system-ui, sans-serif;
+  background: var(--sea-top, #e8eef4);
+  color: var(--ink, #2b2a3a);
+  font-family: var(--font-body, system-ui, sans-serif);
+  font-weight: 500;
   overflow: hidden;
   overscroll-behavior: none;
+  user-select: none;
 }
 
 #game {
@@ -17,95 +26,397 @@ body {
   touch-action: none;
 }
 
-#hud {
-  position: fixed;
-  top: max(8px, env(safe-area-inset-top));
-  left: 0;
-  right: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-variant-numeric: tabular-nums;
-  pointer-events: none;
+[hidden] {
+  display: none !important;
 }
 
-#hud span {
-  opacity: 0.7;
+/* ---------- composants ---------- */
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
 }
 
-#back {
-  position: absolute;
-  left: 8px;
-  width: 40px;
-  height: 40px;
+/* Bouton 3D : face en dégradé, épaisseur dessinée par l'ombre du bas. */
+.btn {
+  width: min(100%, 20rem);
+  padding: 14px 24px 12px;
   border: 0;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #e8ecf4;
+  border-radius: 18px;
+  font-family: var(--font-display);
   font-size: 1.6rem;
-  line-height: 1;
-  pointer-events: auto;
+  letter-spacing: 0.02em;
+  color: #fff;
+  text-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.35),
+    0 0 3px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s;
 }
+.btn-green {
+  background: linear-gradient(var(--green-400), var(--green-600));
+  box-shadow:
+    0 6px 0 var(--green-800),
+    0 10px 14px rgba(29, 41, 74, 0.3);
+}
+.btn-blue {
+  background: linear-gradient(#5b90f0, var(--blue-500));
+  box-shadow:
+    0 6px 0 var(--blue-700),
+    0 10px 14px rgba(29, 41, 74, 0.3);
+}
+.btn:active {
+  transform: translateY(4px);
+}
+.btn-green:active {
+  box-shadow:
+    0 2px 0 var(--green-800),
+    0 4px 8px rgba(29, 41, 74, 0.3);
+}
+.btn-blue:active {
+  box-shadow:
+    0 2px 0 var(--blue-700),
+    0 4px 8px rgba(29, 41, 74, 0.3);
+}
+.btn:focus-visible,
+.round:focus-visible,
+.node:focus-visible,
+#auto button:focus-visible,
+.link:focus-visible {
+  outline: 3px solid var(--gold-500);
+  outline-offset: 3px;
+}
+
+.link {
+  border: 0;
+  background: none;
+  padding: 10px 16px;
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.4);
+  cursor: pointer;
+}
+
+.round {
+  flex: none;
+  width: 44px;
+  height: 44px;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.7rem;
+  line-height: 1;
+  padding: 0 0 4px;
+  box-shadow: 0 3px 0 rgba(43, 42, 58, 0.35);
+  cursor: pointer;
+}
+
+.card {
+  width: min(100%, 24rem);
+  padding: 14px 18px 16px;
+  border: 3px solid var(--ink);
+  border-radius: 20px;
+  background: var(--lav-50);
+  box-shadow:
+    0 5px 0 rgba(43, 42, 58, 0.35),
+    0 12px 20px rgba(29, 41, 74, 0.2);
+  text-align: center;
+}
+.card h2 {
+  margin: 2px 0 6px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.7rem;
+  line-height: 1.1;
+}
+.card p:last-child {
+  margin: 0;
+  font-size: 0.98rem;
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+
+/* ---------- écrans ---------- */
 
 .screen {
   position: fixed;
   inset: 0;
-  box-sizing: border-box;
-  padding: 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 10px;
-  text-align: center;
-  background: rgba(15, 20, 32, 0.92);
+  padding: max(16px, env(safe-area-inset-top)) 16px max(16px, env(safe-area-inset-bottom));
 }
 
-.screen[hidden],
-#hud[hidden] {
-  display: none;
+/* accueil : la carte du chapitre reste visible en haut, les commandes en bas */
+#menu {
+  justify-content: space-between;
+  pointer-events: none;
+  background: linear-gradient(transparent 38%, rgba(232, 238, 244, 0.0) 55%);
+}
+#menu > * {
+  pointer-events: auto;
 }
 
-.screen h1 {
-  margin: 0;
-  font-size: 2.2rem;
+.logo {
+  margin: 4px 0 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(2.6rem, 13vw, 3.8rem);
+  line-height: 1;
+  letter-spacing: 0.02em;
+  color: var(--red-500);
+  -webkit-text-stroke: 7px #fff;
+  paint-order: stroke fill;
+  filter: drop-shadow(0 4px 0 rgba(43, 42, 58, 0.35));
 }
 
-.screen p {
-  margin: 0;
-  max-width: 28rem;
-  line-height: 1.45;
-  opacity: 0.75;
-}
-
-#chapters {
+.menu-bottom {
+  width: 100%;
   display: flex;
   flex-direction: column;
-  gap: 10px;
-  width: min(100%, 22rem);
-  margin-top: 12px;
+  align-items: center;
+  gap: 16px;
+  padding-bottom: 6px;
 }
 
-button {
-  padding: 12px 28px;
-  font-size: 1.05rem;
-  border: 0;
-  border-radius: 10px;
-  background: #3b82f6;
-  color: #fff;
-}
-
-button.secondary,
-#chapters button {
-  background: rgba(255, 255, 255, 0.1);
-}
-
-#chapters button {
+#track {
+  list-style: none;
+  margin: 0;
+  padding: 0;
   display: flex;
-  justify-content: space-between;
-  text-align: left;
+  align-items: center;
+  justify-content: center;
+}
+#track li {
+  display: flex;
+  align-items: center;
+}
+#track li + li::before {
+  content: "";
+  width: clamp(10px, 4vw, 22px);
+  height: 8px;
+  background: var(--lav-300);
+  border-top: 2px solid var(--ink);
+  border-bottom: 2px solid var(--ink);
+}
+#track li.done + li::before {
+  background: var(--green-400);
+}
+.node {
+  width: 46px;
+  height: 46px;
+  border: 3px solid var(--ink);
+  border-radius: 50%;
+  background: var(--lav-100);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.35rem;
+  line-height: 1;
+  padding: 0 0 3px;
+  box-shadow: 0 4px 0 rgba(43, 42, 58, 0.35);
+  cursor: pointer;
+}
+.node.done {
+  background: var(--green-400);
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+.node[aria-current="true"] {
+  background: var(--gold-300);
+  color: var(--ink);
+  text-shadow: none;
+  transform: scale(1.18);
+  box-shadow:
+    0 4px 0 var(--gold-700),
+    0 0 0 4px #fff;
 }
 
-#chapters .done {
-  color: #4ade80;
+/* ---------- HUD en partie ---------- */
+
+#hud {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+#share {
+  flex: 1;
+  height: 22px;
+  display: flex;
+  overflow: hidden;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow: 0 3px 0 rgba(43, 42, 58, 0.3);
+}
+#share span {
+  min-width: 0;
+  transition: flex-grow 0.4s;
+  border-right: 2px solid var(--ink);
+}
+#share span:last-child {
+  border-right: 0;
+}
+#timer {
+  flex: none;
+  min-width: 3.4rem;
+  text-align: center;
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  font-variant-numeric: tabular-nums;
+  text-shadow:
+    0 0 4px #fff,
+    0 0 4px #fff;
+}
+
+#dock {
+  position: fixed;
+  left: 50%;
+  bottom: max(14px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px 8px 16px;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  background: var(--lav-50);
+  box-shadow: 0 4px 0 rgba(43, 42, 58, 0.35);
+}
+.dock-label {
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+}
+#auto {
+  display: flex;
+  gap: 6px;
+}
+#auto button {
+  min-width: 46px;
+  height: 44px;
+  border: 3px solid var(--ink);
+  border-radius: 999px;
+  background: #fff;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 1.1rem;
+  line-height: 1;
+  padding: 0 8px 2px;
+  cursor: pointer;
+}
+#auto button[aria-pressed="true"] {
+  background: var(--green-400);
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+
+/* ---------- écran de fin ---------- */
+
+#overlay {
+  justify-content: center;
+  background: radial-gradient(circle at 50% 35%, #3a4278, var(--night-900) 70%);
+  overflow: hidden;
+}
+.result {
+  position: relative;
+  width: min(100%, 24rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.hero {
+  width: min(70vw, 17rem);
+  margin-bottom: -18px;
+  filter: drop-shadow(0 8px 10px rgba(0, 0, 0, 0.35));
+}
+.ribbon {
+  position: relative;
+  z-index: 1;
+  padding: 10px 40px 8px;
+  border: 3px solid var(--ink);
+  background: var(--blue-500);
+  clip-path: polygon(0 0, 100% 0, calc(100% - 14px) 50%, 100% 100%, 0 100%, 14px 50%);
+}
+.ribbon.lose {
+  background: var(--red-500);
+}
+.ribbon span {
+  font-family: var(--font-display);
+  font-size: 2.3rem;
+  color: #fff;
+  text-shadow:
+    0 3px 0 rgba(0, 0, 0, 0.4),
+    0 0 4px rgba(0, 0, 0, 0.4);
+}
+.panel {
+  width: 100%;
+  margin-top: -6px;
+  padding: 26px 16px 16px;
+  display: flex;
+  justify-content: space-around;
+  border: 3px solid var(--ink);
+  border-radius: 0 0 22px 22px;
+  background: var(--lav-100);
+}
+.stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+.stat strong {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.9rem;
+}
+.actions {
+  width: 100%;
+  margin-top: 22px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
+
+#confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+#confetti i {
+  position: absolute;
+  top: -20px;
+  width: 10px;
+  height: 16px;
+  border-radius: 2px;
+  animation: fall linear infinite;
+}
+@keyframes fall {
+  to {
+    transform: translateY(110vh) rotate(720deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #confetti,
+  .btn,
+  #share span {
+    animation: none;
+    transition: none;
+  }
 }

@@ -7,35 +7,52 @@
       content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover"
     />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="theme-color" content="#0f1420" />
+    <meta name="theme-color" content="#e8eef4" />
     <title>Conquête</title>
     <link rel="stylesheet" href="/src/style.css" />
   </head>
   <body>
     <canvas id="game"></canvas>
+
     <div id="hud" hidden>
-      <button id="back" aria-label="Menu">‹</button>
-      <span id="timer">0:00</span>
+      <button id="back" class="round" aria-label="Retour au menu">‹</button>
+      <div id="share" role="img" aria-label="Part des territoires par camp"></div>
+      <span id="timer" aria-label="Temps de jeu">0:00</span>
+    </div>
+
+    <div id="dock" hidden>
+      <span class="dock-label" id="dock-label">Renforts auto</span>
+      <div id="auto" role="group" aria-labelledby="dock-label"></div>
     </div>
 
     <div id="menu" class="screen">
-      <h1>Conquête</h1>
-      <div id="chapters"></div>
-    </div>
-
-    <div id="intro" class="screen" hidden>
-      <p id="intro-chapter"></p>
-      <h1 id="intro-title"></h1>
-      <p id="intro-notion"></p>
-      <button id="play">Jouer</button>
+      <h1 class="logo"><span>Conquête</span></h1>
+      <div class="menu-bottom" id="menu-bottom">
+        <ol id="track" aria-label="Chapitres"></ol>
+        <section class="card">
+          <p class="eyebrow" id="m-eyebrow"></p>
+          <h2 id="m-title"></h2>
+          <p id="m-notion"></p>
+        </section>
+        <button id="play" class="btn btn-green">Jouer</button>
+      </div>
     </div>
 
     <div id="overlay" class="screen" hidden>
-      <h1 id="result"></h1>
-      <p id="detail"></p>
-      <button id="replay">Rejouer</button>
-      <button id="next" class="secondary">Chapitre suivant</button>
-      <button id="to-menu" class="secondary">Menu</button>
+      <div id="confetti" aria-hidden="true"></div>
+      <div class="result">
+        <div id="hero"></div>
+        <div class="ribbon" id="ribbon"><span id="result"></span></div>
+        <div class="panel">
+          <div class="stat"><span class="eyebrow">Durée</span><strong id="stat-time"></strong></div>
+          <div class="stat"><span class="eyebrow">Territoires</span><strong id="stat-land"></strong></div>
+        </div>
+        <div class="actions">
+          <button id="next" class="btn btn-green">Chapitre suivant</button>
+          <button id="replay" class="btn btn-blue">Rejouer</button>
+          <button id="to-menu" class="link">Menu</button>
+        </div>
+      </div>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

@@ -1,19 +1,21 @@
-import { LEVELS, WORLD_H, WORLD_W, makeLevelAis } from "./engine/level";
-import { FIGHT_FLASH, findPath, send, step } from "./engine/sim";
-import { type Base, type GameState, NEUTRAL, PLAYER } from "./engine/types";
+import "@fontsource/fredoka/500.css";
+import "@fontsource/fredoka/600.css";
+import "@fontsource/fredoka/700.css";
+import "@fontsource/lilita-one/400.css";
 
-const COLORS: Record<number, string> = {
-  [NEUTRAL]: "#6b7280",
-  [PLAYER]: "#3b82f6",
-  2: "#ef4444",
-  3: "#f59e0b",
-  4: "#a855f7",
-};
-const SEA = "#0b1624";
+import { AUTO_THRESHOLDS, makeAutoReinforce } from "./engine/auto";
+import { LEVELS, WORLD_H, WORLD_W, makeLevelAis } from "./engine/level";
+import { findPath, send, step } from "./engine/sim";
+import { type Base, type GameState, PLAYER } from "./engine/types";
+import { heroSvg, launchConfetti } from "./hero";
+import { type Preview, type View, drawScene, shares } from "./render";
+import { applyTheme } from "./theme";
+
+const FIXED_DT = 1 / 60;
 /** Un toucher compte pour un territoire s'il tombe à moins de cette distance (unités monde) de son centre. */
 const TOUCH_RANGE = 19;
-const FIXED_DT = 1 / 60;
-const STORAGE_KEY = "conquete.done";
+const KEY_DONE = "conquete.done";
+const KEY_AUTO = "conquete.auto";
 
 const $ = (id: string) => document.getElementById(id)!;
 const canvas = $("game") as HTMLCanvasElement;
@@ -21,94 +23,60 @@ const ctx = canvas.getContext("2d")!;
 
 let state: GameState | null = null;
 let ais: ((s: GameState, dt: number) => void)[] = [];
+let auto: ((s: GameState, dt: number) => void) | null = null;
 let running = false;
-let current = 0;
+let mode: "menu" | "game" | "result" = "menu";
+let selected = 0; // chapitre choisi dans le menu
+let current = 0; // chapitre en cours
+let autoThreshold = 0;
 let drag: { from: Base; x: number; y: number } | null = null;
-let scale = 1;
-let offX = 0;
-let offY = 0;
+let view: View = { w: 1, h: 1, scale: 1, offX: 0, offY: 0 };
 
+function store(key: string, value?: string): string | null {
+  try {
+    if (value !== undefined) localStorage.setItem(key, value);
+    return localStorage.getItem(key);
+  } catch {
+    return null; // stockage indisponible : on perd juste la mémoire
+  }
+}
 function loadDone(): number[] {
   try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? "[]");
+    return JSON.parse(store(KEY_DONE) ?? "[]");
   } catch {
     return [];
   }
 }
-function markDone(i: number): void {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify([...new Set([...loadDone(), i])]));
-  } catch {
-    /* stockage indisponible : on perd juste les coches */
-  }
-}
-
+const markDone = (i: number) => store(KEY_DONE, JSON.stringify([...new Set([...loadDone(), i])]));
 const fmtTime = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
 
-function show(screen: "menu" | "intro" | "overlay" | "game"): void {
-  $("menu").hidden = screen !== "menu";
-  $("intro").hidden = screen !== "intro";
-  $("overlay").hidden = screen !== "overlay";
-  $("hud").hidden = screen !== "game" && screen !== "overlay";
+/* ---------- mise en page du canvas ---------- */
+
+/** Zone du canvas laissée à la carte, en pixels CSS, selon ce que l'interface recouvre. */
+function mapInsets(): { top: number; bottom: number } {
+  if (mode === "menu") return { top: 74, bottom: $("menu-bottom").getBoundingClientRect().height + 20 };
+  return { top: 62, bottom: $("dock").hidden ? 18 : 78 };
 }
 
-function showMenu(): void {
-  running = false;
-  state = null;
-  const done = loadDone();
-  $("chapters").replaceChildren(
-    ...LEVELS.map((l, i) => {
-      const b = document.createElement("button");
-      const mark = document.createElement("span");
-      mark.textContent = done.includes(i) ? "✓" : "";
-      mark.className = "done";
-      b.append(`${i + 1}. ${l.title}`, mark);
-      b.addEventListener("click", () => openIntro(i));
-      return b;
-    }),
-  );
-  show("menu");
-}
-
-function openIntro(i: number): void {
-  current = i;
-  $("intro-chapter").textContent = `Chapitre ${i + 1}`;
-  $("intro-title").textContent = LEVELS[i].title;
-  $("intro-notion").textContent = LEVELS[i].notion;
-  show("intro");
-}
-
-function start(): void {
-  const def = LEVELS[current];
-  state = def.build();
-  ais = makeLevelAis(def);
-  drag = null;
-  running = true;
-  show("game");
-}
-
-function showResult(): void {
-  if (!state) return;
-  const won = state.winner === PLAYER;
-  if (won) markDone(current);
-  $("result").textContent = won ? "Victoire" : "Défaite";
-  $("detail").textContent = `Durée : ${fmtTime(state.time)}`;
-  $("next").hidden = !won || current + 1 >= LEVELS.length;
-  show("overlay");
-}
-
-function resize(): void {
+function layout(): void {
   const dpr = window.devicePixelRatio || 1;
-  canvas.width = window.innerWidth * dpr;
-  canvas.height = window.innerHeight * dpr;
-  scale = Math.min(canvas.width / WORLD_W, canvas.height / WORLD_H);
-  offX = (canvas.width - WORLD_W * scale) / 2;
-  offY = (canvas.height - WORLD_H * scale) / 2;
+  canvas.width = Math.round(window.innerWidth * dpr);
+  canvas.height = Math.round(window.innerHeight * dpr);
+  const { top, bottom } = mapInsets();
+  const areaH = Math.max(80, window.innerHeight - top - bottom) * dpr;
+  const scale = Math.min(canvas.width / WORLD_W, areaH / WORLD_H);
+  view = {
+    w: canvas.width,
+    h: canvas.height,
+    scale,
+    offX: (canvas.width - WORLD_W * scale) / 2,
+    offY: top * dpr + (areaH - WORLD_H * scale) / 2,
+  };
 }
 
 function toWorld(e: PointerEvent): { x: number; y: number } {
   const dpr = window.devicePixelRatio || 1;
-  return { x: (e.clientX * dpr - offX) / scale, y: (e.clientY * dpr - offY) / scale };
+  return { x: (e.clientX * dpr - view.offX) / view.scale, y: (e.clientY * dpr - view.offY) / view.scale };
 }
 
 /** Territoire le plus proche du point (donc celui qui le contient), dans la limite d'une zone de toucher généreuse. */
@@ -124,6 +92,97 @@ function baseAt(x: number, y: number): Base | null {
   }
   return best;
 }
+
+/* ---------- écrans ---------- */
+
+function setMode(next: typeof mode): void {
+  mode = next;
+  $("menu").hidden = next !== "menu";
+  $("hud").hidden = next !== "game";
+  $("overlay").hidden = next !== "result";
+  $("dock").hidden = !(next === "game" && LEVELS[current].auto);
+}
+
+function showMenu(): void {
+  running = false;
+  drag = null;
+  setMode("menu");
+  state = LEVELS[selected].build();
+  renderMenu();
+  layout();
+}
+
+function renderMenu(): void {
+  const done = loadDone();
+  $("track").replaceChildren(
+    ...LEVELS.map((l, i) => {
+      const li = document.createElement("li");
+      if (done.includes(i)) li.className = "done";
+      const b = document.createElement("button");
+      b.className = `node${done.includes(i) ? " done" : ""}`;
+      b.textContent = done.includes(i) ? "✓" : String(i + 1);
+      b.setAttribute("aria-label", `Chapitre ${i + 1} : ${l.title}${done.includes(i) ? ", terminé" : ""}`);
+      if (i === selected) b.setAttribute("aria-current", "true");
+      b.addEventListener("click", () => {
+        selected = i;
+        showMenu();
+      });
+      li.append(b);
+      return li;
+    }),
+  );
+  $("m-eyebrow").textContent = `Chapitre ${selected + 1}`;
+  $("m-title").textContent = LEVELS[selected].title;
+  $("m-notion").textContent = LEVELS[selected].notion;
+}
+
+function renderAutoDock(): void {
+  $("auto").replaceChildren(
+    ...AUTO_THRESHOLDS.map((t) => {
+      const b = document.createElement("button");
+      b.textContent = t === 0 ? "Off" : String(t);
+      b.setAttribute("aria-pressed", String(t === autoThreshold));
+      b.setAttribute("aria-label", t === 0 ? "Renforts automatiques désactivés" : `Renforts automatiques à ${t} troupes`);
+      b.addEventListener("click", () => {
+        autoThreshold = t;
+        store(KEY_AUTO, String(t));
+        renderAutoDock();
+      });
+      return b;
+    }),
+  );
+}
+
+function start(): void {
+  current = selected;
+  const def = LEVELS[current];
+  state = def.build();
+  ais = makeLevelAis(def);
+  auto = def.auto ? makeAutoReinforce(PLAYER, () => autoThreshold) : null;
+  drag = null;
+  running = true;
+  renderAutoDock();
+  setMode("game");
+  layout();
+}
+
+function showResult(): void {
+  if (!state) return;
+  const s = state;
+  const won = s.winner === PLAYER;
+  if (won) markDone(current);
+  $("hero").innerHTML = heroSvg(won);
+  $("ribbon").className = `ribbon${won ? "" : " lose"}`;
+  $("result").textContent = won ? "Victoire !" : "Défaite";
+  $("stat-time").textContent = fmtTime(s.time);
+  $("stat-land").textContent = `${s.bases.filter((b) => b.owner === PLAYER).length}/${s.bases.length}`;
+  $("next").hidden = !won || current + 1 >= LEVELS.length;
+  if (won) launchConfetti($("confetti"));
+  else $("confetti").replaceChildren();
+  setMode("result");
+}
+
+/* ---------- entrée ---------- */
 
 canvas.addEventListener("pointerdown", (e) => {
   if (!running || !state) return;
@@ -147,117 +206,39 @@ canvas.addEventListener("pointerup", (e) => {
 canvas.addEventListener("pointercancel", () => (drag = null));
 $("play").addEventListener("click", start);
 $("replay").addEventListener("click", start);
-$("next").addEventListener("click", () => openIntro(current + 1));
+$("next").addEventListener("click", () => {
+  selected = Math.min(current + 1, LEVELS.length - 1);
+  showMenu();
+});
 $("to-menu").addEventListener("click", showMenu);
 $("back").addEventListener("click", showMenu);
-window.addEventListener("resize", resize);
+window.addEventListener("resize", layout);
 
-function drawSeaLinks(s: GameState): void {
-  ctx.strokeStyle = "rgba(255,255,255,0.35)";
-  ctx.lineWidth = 0.8;
-  ctx.setLineDash([2, 2]);
-  ctx.beginPath();
-  for (const [a, b] of s.seaLinks) {
-    ctx.moveTo(s.bases[a].x, s.bases[a].y);
-    ctx.lineTo(s.bases[b].x, s.bases[b].y);
-  }
-  ctx.stroke();
-  ctx.setLineDash([]);
+/* ---------- affichage ---------- */
+
+function previewOf(s: GameState): Preview | null {
+  if (!drag) return null;
+  const hover = baseAt(drag.x, drag.y);
+  if (!hover || hover === drag.from) return { kind: "free", from: drag.from, x: drag.x, y: drag.y };
+  const route = findPath(s, drag.from.id, hover.id, PLAYER);
+  if (!route) return { kind: "blocked", from: drag.from, at: hover };
+  return { kind: "route", from: drag.from, points: route.path.map((id) => [s.bases[id].x, s.bases[id].y]) };
 }
 
-/** Aperçu du chemin pendant le glisser : surbrillance du trajet, ou croix rouge si impossible. */
-function drawDragPreview(s: GameState, d: NonNullable<typeof drag>): void {
-  const hover = baseAt(d.x, d.y);
-  if (!hover || hover === d.from) {
-    ctx.strokeStyle = "rgba(255,255,255,0.5)";
-    ctx.lineWidth = 1;
-    ctx.setLineDash([2, 2]);
-    ctx.beginPath();
-    ctx.moveTo(d.from.x, d.from.y);
-    ctx.lineTo(d.x, d.y);
-    ctx.stroke();
-    ctx.setLineDash([]);
-    return;
-  }
-  const route = findPath(s, d.from.id, hover.id, PLAYER);
-  if (!route) {
-    ctx.strokeStyle = "#ef4444";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.moveTo(hover.x - 3, hover.y - 3);
-    ctx.lineTo(hover.x + 3, hover.y + 3);
-    ctx.moveTo(hover.x + 3, hover.y - 3);
-    ctx.lineTo(hover.x - 3, hover.y + 3);
-    ctx.stroke();
-    return;
-  }
-  ctx.strokeStyle = "#fff";
-  ctx.lineWidth = 1.6;
-  ctx.lineJoin = "round";
-  ctx.beginPath();
-  ctx.moveTo(d.from.x, d.from.y);
-  for (const id of route.path) ctx.lineTo(s.bases[id].x, s.bases[id].y);
-  ctx.stroke();
-}
-
-function draw(): void {
-  ctx.fillStyle = SEA;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-  if (!state) return;
-  const s = state;
-  ctx.save();
-  ctx.translate(offX, offY);
-  ctx.scale(scale, scale);
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-
-  for (const b of s.bases) {
-    ctx.beginPath();
-    s.shapes[b.id].forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
-    ctx.closePath();
-    ctx.globalAlpha = b.owner === NEUTRAL ? 0.55 : 0.8;
-    ctx.fillStyle = COLORS[b.owner];
-    ctx.fill();
-    ctx.globalAlpha = 1;
-    if (drag && drag.from === b) {
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 1.2;
-      ctx.stroke();
-    }
-  }
-  drawSeaLinks(s);
-  if (drag) drawDragPreview(s, drag);
-
-  for (const b of s.bases) {
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 6px system-ui, sans-serif";
-    ctx.fillText(String(Math.floor(b.troops)), b.x, b.y);
-  }
-
-  for (const q of s.squads) {
-    ctx.beginPath();
-    ctx.arc(q.x, q.y, 1.8, 0, Math.PI * 2);
-    ctx.fillStyle = COLORS[q.owner];
-    ctx.fill();
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 0.5;
-    ctx.stroke();
-    ctx.fillStyle = "#fff";
-    ctx.font = "bold 3.4px system-ui, sans-serif";
-    ctx.fillText(String(q.count), q.x, q.y - 3.6);
-  }
-
-  for (const f of s.fights) {
-    const age = (s.time - f.t) / FIGHT_FLASH;
-    ctx.globalAlpha = 1 - age;
-    ctx.strokeStyle = "#fff";
-    ctx.lineWidth = 1.2;
-    ctx.beginPath();
-    ctx.arc(f.x, f.y, 2.5 + age * 5, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-  }
-  ctx.restore();
+let shareKey = "";
+function updateShare(s: GameState): void {
+  const parts = shares(s);
+  const key = parts.map((p) => `${p.owner}:${p.count}`).join("|");
+  if (key === shareKey) return;
+  shareKey = key;
+  $("share").replaceChildren(
+    ...parts.map((p) => {
+      const span = document.createElement("span");
+      span.style.flexGrow = String(p.count);
+      span.style.background = `var(--owner-${p.owner})`;
+      return span;
+    }),
+  );
 }
 
 let last = performance.now();
@@ -267,6 +248,7 @@ function frame(now: number): void {
   last = now;
   while (running && state && acc >= FIXED_DT) {
     for (const ai of ais) ai(state, FIXED_DT);
+    auto?.(state, FIXED_DT);
     step(state, FIXED_DT);
     acc -= FIXED_DT;
     if (state.winner !== null) {
@@ -275,11 +257,20 @@ function frame(now: number): void {
     }
   }
   if (!running) acc = 0;
-  if (state) $("timer").textContent = fmtTime(state.time);
-  draw();
+  if (state && mode === "game") {
+    $("timer").textContent = fmtTime(state.time);
+    updateShare(state);
+  }
+  const shown = mode === "result" ? null : state;
+  drawScene(ctx, view, shown, drag?.from.id ?? null, shown && running ? previewOf(shown) : null);
   requestAnimationFrame(frame);
 }
 
-resize();
+applyTheme();
+autoThreshold = Number(store(KEY_AUTO) ?? 0);
+if (!(AUTO_THRESHOLDS as readonly number[]).includes(autoThreshold)) autoThreshold = 0;
+const finished = loadDone();
+const firstTodo = LEVELS.findIndex((_, i) => !finished.includes(i));
+selected = firstTodo === -1 ? LEVELS.length - 1 : firstTodo;
 showMenu();
 requestAnimationFrame(frame);

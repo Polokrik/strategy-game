@@ -10,6 +10,8 @@ export interface LevelDef {
   notion: string;
   /** `handicap` multiplie la production de l'IA : le réglage de difficulté de chaque chapitre (réglages de départ, à valider en jouant) */
   ais: { owner: OwnerId; personality: Personality; handicap?: number }[];
+  /** propose les renforts automatiques (introduits par le chapitre « Renforts ») */
+  auto?: boolean;
   /** carte par défaut ; une autre graine donne une autre carte du même style (utile aux tests) */
   build: (seed?: number) => GameState;
 }
@@ -79,8 +81,24 @@ export const LEVELS: LevelDef[] = [
       }),
   },
   {
+    title: "Renforts",
+    notion:
+      "Les territoires de l'arrière s'ennuient. Choisis un seuil (10, 20 ou 30) : dès qu'un territoire sans voisin hostile l'atteint, il envoie ses troupes vers le front le plus proche. Tu gardes la main sur chaque attaque.",
+    ais: [{ owner: 2, personality: OPPORTUNIST, handicap: 0.55 }],
+    auto: true,
+    build: (seed = 21) =>
+      generateMap({
+        seed,
+        cols: 4,
+        rows: 7,
+        land: blob(50, 82, 50, 76),
+        starts: [START, { owner: 2, x: 50, y: 8 }],
+      }),
+  },
+  {
     title: "Deux adversaires",
     notion: "Deux IA aux styles différents s'affrontent aussi entre elles : laisse-les s'user.",
+    auto: true,
     ais: [
       { owner: 2, personality: OPPORTUNIST, handicap: 0.55 },
       { owner: 3, personality: DEFENSIVE, handicap: 0.55 },
@@ -97,6 +115,7 @@ export const LEVELS: LevelDef[] = [
   {
     title: "Trois adversaires",
     notion: "Trois IA, trois styles : agressive, opportuniste, défensive. Choisis qui affaiblir en premier.",
+    auto: true,
     ais: [
       { owner: 2, personality: AGGRESSIVE, handicap: 0.55 },
       { owner: 3, personality: OPPORTUNIST, handicap: 0.55 },
