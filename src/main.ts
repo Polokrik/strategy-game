@@ -47,6 +47,7 @@ import { LEVELS, type LevelDef, WORLD_H, WORLD_W, makeLevelAis } from "./engine/
 import { findPath, send, step } from "./engine/sim";
 import { type Base, type GameState, PLAYER } from "./engine/types";
 import { heroSvg, launchConfetti } from "./hero";
+import { renderSquad } from "./squad";
 import { type AutoMark, type Preview, type View, drawScene, shares } from "./render";
 import { FACTION, applyTheme } from "./theme";
 
@@ -82,7 +83,8 @@ let auto: ((s: GameState, dt: number) => void) | null = null;
 let running = false;
 let paused = false;
 let mode: Mode = "menu";
-let tab: "chapters" | "campaign" = "chapters";
+let tab: "chapters" | "campaign" | "squad" = "chapters";
+let unitPick = "cavalry";
 let selected = 0; // chapitre choisi dans le menu
 let current = 0; // chapitre en cours
 let autoThreshold = 0;
@@ -209,13 +211,27 @@ function showMenu(): void {
 }
 
 function renderMenu(): void {
-  const isCampaign = tab === "campaign";
-  $("tab-chapters").setAttribute("aria-selected", String(!isCampaign));
-  $("tab-campaign").setAttribute("aria-selected", String(isCampaign));
-  $("pane-chapters").hidden = isCampaign;
-  $("pane-campaign").hidden = !isCampaign;
-  if (isCampaign) renderCampaignMenu();
+  for (const t of ["chapters", "campaign", "squad"] as const) {
+    $(`tab-${t}`).setAttribute("aria-selected", String(tab === t));
+    $(`pane-${t}`).hidden = tab !== t;
+  }
+  if (tab === "campaign") renderCampaignMenu();
+  else if (tab === "squad") renderSquadMenu();
   else renderChapters();
+}
+
+/** Galerie des unités : la campagne choisie dit jusqu'où le royaume s'est étendu. */
+function renderSquadMenu(): void {
+  const sc = SCENARIOS[scenarioPick];
+  const saved = saves[sc.id];
+  const reach = saved ? saved.reach : 0;
+  state = null;
+  preview = null;
+  $("sq-camp").textContent = saved ? `${sc.short} · ${reach} provinces tenues` : `${sc.short} · pas de partie`;
+  renderSquad($("sq-grid"), $("sq-detail"), $("sq-stage"), reach, unitPick, (id) => {
+    unitPick = id;
+    renderSquadMenu();
+  });
 }
 
 function renderChapters(): void {
@@ -847,6 +863,10 @@ $("tab-chapters").addEventListener("click", () => {
 });
 $("tab-campaign").addEventListener("click", () => {
   tab = "campaign";
+  showMenu();
+});
+$("tab-squad").addEventListener("click", () => {
+  tab = "squad";
   showMenu();
 });
 $("c-continue").addEventListener("click", () => {

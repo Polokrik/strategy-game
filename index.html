@@ -68,11 +68,6 @@
     <div id="menu" class="screen">
       <h1 class="logo"><span>Conquête</span></h1>
       <div class="menu-bottom" id="menu-bottom">
-        <div id="tabs" role="tablist">
-          <button id="tab-chapters" role="tab" aria-selected="true">Chapitres</button>
-          <button id="tab-campaign" role="tab" aria-selected="false">Campagne</button>
-        </div>
-
         <div class="pane" id="pane-chapters" role="tabpanel">
           <ol id="track" aria-label="Chapitres"></ol>
           <section class="card">
@@ -94,8 +89,21 @@
           <p id="diff-note"></p>
           <button id="c-continue" class="btn btn-green">Continuer</button>
           <button id="c-new" class="btn btn-blue">Nouvelle partie</button>
+        </div>
+
+        <div class="pane" id="pane-squad" role="tabpanel" hidden>
+          <p class="eyebrow" id="sq-camp"></p>
+          <div id="sq-stage"></div>
+          <div id="sq-grid"></div>
+          <section class="card" id="sq-detail"></section>
           <button id="c-journal" class="link">Copier mon journal de jeu</button>
         </div>
+
+        <nav id="tabs" role="tablist" aria-label="Navigation">
+          <button id="tab-chapters" role="tab" aria-selected="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 19 L16 8 M14 5 L19 5 L19 10 M19 19 L8 8 M10 5 L5 5 L5 10"/></svg><span>Chapitres</span></button>
+          <button id="tab-campaign" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6 L9 4 L15 6 L20 4 L20 18 L15 20 L9 18 L4 20 Z M9 4 V18 M15 6 V20"/></svg><span>Campagne</span></button>
+          <button id="tab-squad" role="tab" aria-selected="false"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2.4"/><path d="M3 19 Q3 13 9 13 Q15 13 15 19 Z M15 14 Q21 13 21 19 H17"/></svg><span>Escouade</span></button>
+        </nav>
       </div>
     </div>
 

@@ -215,3 +215,9 @@ La carte jointe par Paul montre des **provinces historiques** (Flandre-Artois, G
 - Les campagnes historiques (Philippe Auguste, La France se fait) datent selon la conquête : de 1180 à 1223 (resp. 1768) quand l'objectif est rempli, +1 an tous les 3 tours pour que le temps ne se fige jamais. Elle ne recule pas si une province est perdue (`reach`). « Fais ton histoire », décorrélée de l'histoire réelle, garde 3 ans par tour.
 - Les époques suivent la taille maximale du royaume (`reach`). Palier 1 : « Royaume » à 6 provinces = cavalerie, les troupes du joueur avancent à ×1,3 dans les batailles de campagne (`GameState.speedMul`). Aucune mesure d'équilibre encore : à juger en jouant, ×1,3 est un choix au jugé.
 - Pas encore : « Grand royaume » (12) et « France » (20), nouvelle unité avec taux d'apparition. On attend le retour sur la cavalerie.
+
+## Navigation du bas et escouade (d'après les captures de référence)
+
+- Barre d'onglets en bas (Chapitres · Campagne · Escouade) à la place des onglets du haut. Emprunt de comportement uniquement (le niveau global, les gemmes, les packs et les pubs vus sur les captures ne sont pas repris).
+- Écran « Escouade » : galerie d'unités avec silhouettes verrouillées, mise en avant de l'unité choisie, fiche avec ses chiffres. Déblocage par la taille du royaume dans la campagne choisie, sans achat. Les deux dernières cartes (12 et 20 provinces) sont des silhouettes « ? » : aucune unité n'est conçue derrière.
+- Personnages dessinés en vectoriel (fantassin, cavalier), sans asset ; remplaçables plus tard.
