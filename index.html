@@ -15,26 +15,76 @@
     <canvas id="game"></canvas>
 
     <div id="hud" hidden>
-      <button id="back" class="round" aria-label="Retour au menu">‹</button>
+      <button id="back" class="round" aria-label="Retour">‹</button>
       <div id="share" role="img" aria-label="Part des territoires par camp"></div>
       <span id="timer" aria-label="Temps de jeu">0:00</span>
     </div>
 
     <div id="dock" hidden>
-      <span class="dock-label" id="dock-label">Renforts auto</span>
+      <div class="dock-head">
+        <span class="dock-label" id="dock-label">Renforts auto</span>
+        <span id="auto-count" aria-live="polite"></span>
+      </div>
       <div id="auto" role="group" aria-labelledby="dock-label"></div>
+    </div>
+
+    <div id="camp-hud" hidden>
+      <button id="camp-back" class="round" aria-label="Retour au menu">‹</button>
+      <div class="pill" id="camp-when"></div>
+      <div class="pill" id="camp-goal"></div>
+    </div>
+
+    <div id="camp-panel" class="card" hidden>
+      <div class="faction-line"><i id="cp-dot"></i><span id="cp-faction"></span></div>
+      <h2 id="cp-name"></h2>
+      <p id="cp-note"></p>
+      <div class="cp-actions">
+        <button id="cp-attack" class="btn btn-green">Attaquer</button>
+        <button id="cp-pass" class="btn btn-blue">Passer le tour</button>
+      </div>
     </div>
 
     <div id="menu" class="screen">
       <h1 class="logo"><span>Conquête</span></h1>
       <div class="menu-bottom" id="menu-bottom">
-        <ol id="track" aria-label="Chapitres"></ol>
-        <section class="card">
-          <p class="eyebrow" id="m-eyebrow"></p>
-          <h2 id="m-title"></h2>
-          <p id="m-notion"></p>
-        </section>
-        <button id="play" class="btn btn-green">Jouer</button>
+        <div id="tabs" role="tablist">
+          <button id="tab-chapters" role="tab" aria-selected="true">Chapitres</button>
+          <button id="tab-campaign" role="tab" aria-selected="false">Campagne</button>
+        </div>
+
+        <div class="pane" id="pane-chapters" role="tabpanel">
+          <ol id="track" aria-label="Chapitres"></ol>
+          <section class="card">
+            <p class="eyebrow" id="m-eyebrow"></p>
+            <h2 id="m-title"></h2>
+            <p id="m-notion"></p>
+          </section>
+          <button id="play" class="btn btn-green">Jouer</button>
+        </div>
+
+        <div class="pane" id="pane-campaign" role="tabpanel" hidden>
+          <div id="scenarios" role="group" aria-label="Scénario"></div>
+          <section class="card">
+            <p class="eyebrow" id="c-eyebrow">Histoire de France</p>
+            <h2 id="c-title"></h2>
+            <p id="c-blurb"></p>
+          </section>
+          <div id="difficulty" role="group" aria-label="Difficulté"></div>
+          <button id="c-continue" class="btn btn-green">Continuer</button>
+          <button id="c-new" class="btn btn-blue">Nouvelle partie</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="chronicle" class="screen" hidden>
+      <div class="result">
+        <div class="ribbon"><span id="chr-title">Chronique</span></div>
+        <div class="panel chr-panel">
+          <ul id="chr-lines"></ul>
+        </div>
+        <div class="actions">
+          <button id="chr-ok" class="btn btn-green">Continuer</button>
+        </div>
       </div>
     </div>
 

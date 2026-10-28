@@ -16,17 +16,17 @@ export interface LevelDef {
   build: (seed?: number) => GameState;
 }
 
-type Mask = (x: number, y: number) => boolean;
-const blob =
+export type Mask = (x: number, y: number) => boolean;
+export const blob =
   (cx: number, cy: number, rx: number, ry: number): Mask =>
   (x, y) =>
     ((x - cx) / rx) ** 2 + ((y - cy) / ry) ** 2 <= 1;
 
-const union =
+export const union =
   (...masks: Mask[]): Mask =>
   (x, y) =>
     masks.some((m) => m(x, y));
-const without =
+export const without =
   (mask: Mask, hole: Mask): Mask =>
   (x, y) =>
     mask(x, y) && !hole(x, y);
@@ -83,7 +83,7 @@ export const LEVELS: LevelDef[] = [
   {
     title: "Renforts",
     notion:
-      "Les territoires de l'arrière s'ennuient. Choisis un seuil (10, 20 ou 30) : dès que l'un des 2 plus gros territoires de l'arrière l'atteint (flèches vertes), il envoie ses troupes vers le front le plus proche. Un quart se perd en route, et tu gardes la main sur chaque attaque.",
+      "Touche un de tes territoires pour l'automatiser, jusqu'à un sixième d'entre eux. Dès qu'un territoire automatisé de l'arrière atteint le seuil (10, 20 ou 30), il envoie ses troupes vers le front le plus proche. Tu gardes la main sur chaque attaque.",
     ais: [{ owner: 2, personality: OPPORTUNIST, handicap: 0.55 }],
     auto: true,
     build: (seed = 21) =>

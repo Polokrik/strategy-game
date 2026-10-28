@@ -19,6 +19,18 @@ export const OWNER: Record<number, Tone> = {
   4: { fill: "#c99cf0", dark: "#6b2f9e" },
 };
 
+/** Factions de la campagne : une couleur chacune ; la Couronne est toujours le bleu du joueur. */
+export const FACTION: Record<string, Tone> = {
+  crown: OWNER[1],
+  plantagenets: OWNER[2],
+  flandre: OWNER[3],
+  empire: { fill: "#7fd6d0", dark: "#1f7a74" },
+  toulouse: { fill: "#f5a3c7", dark: "#a8396e" },
+  bourgogne: OWNER[4],
+  champagne: { fill: "#9fe0a2", dark: "#2f7d38" },
+  neutral: OWNER[0],
+};
+
 export const SEA = {
   top: "#e8eef4",
   bottom: "#cddae6",

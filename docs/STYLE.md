@@ -55,7 +55,14 @@ Contours `3px` encre sur les éléments d'interface, `0,7` unité monde sur la c
 - **Interception** : étoile de bande dessinée dorée qui tourne et s'efface en 0,8 s.
 - **Glisser** : territoire de départ entouré de blanc ; trajet en blanc avec contour encre et pointe de flèche ; croix rouge si la cible est inatteignable.
 - **Traversées maritimes** : pointillés blancs.
-- **Renforts automatiques** : pastille verte à double chevron sur chaque territoire automatisé (2 au plus).
+- **Renforts automatiques** : pastille à double chevron sur chaque territoire coché (verte : il envoie ; grise : en attente, au front ou seuil sur Off). Un toucher sur son propre territoire le coche ou le décoche.
+
+## Carte de campagne
+
+- Provinces remplies de la couleur de leur camp (`FACTION` dans `theme.ts` : Couronne = bleu du joueur, Plantagenêts corail, Flandre ambre, Saint-Empire turquoise, Toulouse rose, Bourgogne violet, Champagne menthe, indépendants beige), contour encre, écume et ombre portée comme en bataille.
+- **Provinces attaquables** : halo doré qui pulse. **Province choisie** : contour blanc épais. **Objectif du scénario** : étoile dorée sur le nom.
+- Noms en Fredoka 700 avec halo blanc, coupés au trait d'union dans les petites provinces. Traversée maritime en pointillés blancs.
+- Fiche de province en bas (camp, nom, note historique, **Attaquer** / **Passer le tour**), bandeau du haut (année et tour, objectif), chronique en écran sombre avec ruban.
 
 ## Composants
 

@@ -25,7 +25,7 @@ export const tier = (b: Base): 1 | 2 | 3 => (b.capacity >= 60 ? 3 : b.capacity >
 let seaCache: { key: string; canvas: HTMLCanvasElement } | null = null;
 
 /** La mer ne change jamais : on la dessine une fois par taille d'écran. */
-function drawSea(ctx: CanvasRenderingContext2D, w: number, h: number): void {
+export function drawSea(ctx: CanvasRenderingContext2D, w: number, h: number): void {
   const key = `${w}x${h}`;
   if (!seaCache || seaCache.key !== key) {
     const c = document.createElement("canvas");
@@ -229,13 +229,20 @@ function drawMarker(ctx: CanvasRenderingContext2D, b: Base): void {
   ctx.fillText(String(Math.floor(b.troops)), b.x, b.y + 0.3);
 }
 
-/** Pastille verte à chevrons : ce territoire envoie ses renforts tout seul. */
-function drawAutoBadge(ctx: CanvasRenderingContext2D, b: Base): void {
+/** Territoire coché pour les renforts automatiques. */
+export interface AutoMark {
+  id: number;
+  /** vrai : il envoie ses renforts (vert) ; faux : en attente, au front ou seuil sur Off (gris) */
+  active: boolean;
+}
+
+/** Pastille à chevrons : ce territoire envoie ses renforts tout seul (vert) ou est en attente (gris). */
+function drawAutoBadge(ctx: CanvasRenderingContext2D, b: Base, active: boolean): void {
   const x = b.x + 6.6;
   const y = b.y - 6.6;
   ctx.beginPath();
   ctx.arc(x, y, 3, 0, Math.PI * 2);
-  ctx.fillStyle = "#3fb248";
+  ctx.fillStyle = active ? "#3fb248" : "#9aa0b4";
   ctx.fill();
   ctx.strokeStyle = INK;
   ctx.lineWidth = 0.7;
@@ -368,7 +375,7 @@ export function drawScene(
   s: GameState | null,
   selected: number | null,
   preview: Preview | null,
-  autoIds: readonly number[] = [],
+  autoMarks: readonly AutoMark[] = [],
 ): void {
   drawSea(ctx, view.w, view.h);
   if (!s) return;
@@ -379,7 +386,7 @@ export function drawScene(
   drawSeaLinks(ctx, s);
   if (preview) drawPreview(ctx, preview);
   for (const b of s.bases) drawMarker(ctx, b);
-  for (const id of autoIds) drawAutoBadge(ctx, s.bases[id]);
+  for (const m of autoMarks) drawAutoBadge(ctx, s.bases[m.id], m.active);
   drawSquads(ctx, s);
   drawFights(ctx, s);
   ctx.restore();

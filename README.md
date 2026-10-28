@@ -6,6 +6,12 @@ Les batailles se jouent sur une **carte de territoires** façon mappemonde : des
 
 **Twist du prototype : les troupes sont interceptables en transit.** Deux troupes ennemies qui se croisent sur la même frontière s'annulent, la plus grosse survit diminuée (un flash marque le choc). Seule la frontière compte, pas la géométrie : deux trajets qui se croisent à l'écran sans partager de frontière ne s'interceptent pas.
 
+## Campagne « histoire de France »
+
+Onglet **Campagne** du menu. Une carte par tours des 26 provinces d'Ancien Régime : en 1180 la Couronne ne tient que trois provinces, à toi de reconstruire le royaume. Chaque attaque est une vraie bataille ; les autres camps jouent entre eux en accéléré (chronique à chaque tour). Deux scénarios (5 provinces, ou toute la France), trois difficultés, sauvegarde automatique. Détail, découpage et mesures : `DESIGN.md`.
+
+Les provinces sont construites en fusionnant des départements actuels (`tools/build-france.py`, nécessite `pip install shapely`, génère `src/data/france.json`). Le tableau départements → provinces est approximatif et les dates historiques (`src/campaign/france.ts`) sont à vérifier.
+
 ## Style
 
 Lisibilité State.io sur la carte, charme cartoon type Civilization dans l'habillage. Voir `docs/STYLE.md`. Troupes en flux de points, paliers de territoire en amas de disques, barre de répartition des territoires.
@@ -22,7 +28,7 @@ Lisibilité State.io sur la carte, charme cartoon type Civilization dans l'habil
 1. Premiers pas : glisser, capturer. 1 IA défensive.
 2. Traversées : îles et traversées maritimes. 1 IA défensive.
 3. Interception : 1 IA agressive.
-4. Renforts : renforts automatiques bornés (2 plus gros territoires de l'arrière, seuil 10 / 20 / 30, 25 % de pertes). 1 IA opportuniste.
+4. Renforts : renforts automatiques bornés (un territoire sur six, à cocher, seuil 10 / 20 / 30). 1 IA opportuniste.
 5. Deux adversaires : opportuniste + défensive.
 6. Trois adversaires : agressive + opportuniste + défensive.
 
@@ -45,6 +51,8 @@ npm run build
   - `ai.ts` IA paramétrable : personnalités, attaques coordonnées sur une même cible
   - `auto.ts` renforts automatiques
   - `level.ts` chapitres, cartes, handicaps de difficulté
+- `src/campaign/` : la campagne. `campaign.ts` règles (pures, testées), `france.ts` données historiques, `render.ts` dessin de la carte. `src/data/france.json` : géométrie générée.
+- `tools/build-france.py` : génère la géométrie des provinces.
 - `src/main.ts` : écrans, entrée tactile (pointer events), boucle à pas fixe. `src/render.ts` : dessin de la carte. `src/theme.ts` : tokens de style. `src/hero.ts` : mascotte et confettis.
 
 ## Stack
