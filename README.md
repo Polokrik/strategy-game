@@ -2,12 +2,21 @@
 
 Prototype de bataille (phase 1 du design doc) : un « Risk simplifié » en temps réel. On glisse d'une base à l'autre pour envoyer la moitié des troupes ; le plus grand nombre gagne.
 
-**Twist du prototype : les troupes sont interceptables en transit.** Deux groupes ennemis qui se croisent s'annulent, le plus gros survit diminué. Les troupes suivent des **routes** et passent par des **carrefours** (là où on peut se couper la route) ; le chemin s'affiche pendant le glisser et un flash marque chaque interception.
+Les batailles se jouent sur une **carte de territoires** façon mappemonde : des régions avec des frontières, des mers, des îles reliées par des traversées maritimes (pointillés). On attaque un territoire voisin, ou on traverse ses propres territoires pour rejoindre le front.
 
-## Chapitres (phase 2)
+**Twist du prototype : les troupes sont interceptables en transit.** Deux troupes ennemies qui se croisent sur la même frontière s'annulent, la plus grosse survit diminuée (un flash marque le choc). Seule la frontière compte, pas la géométrie : deux trajets qui se croisent à l'écran sans partager de frontière ne s'interceptent pas.
+
+## Garde-fous anti-boule de neige
+
+- **Fatigue d'empire** : au-delà de 4 territoires, chaque territoire produit un peu moins (pour tout le monde).
+- **Les IA ciblent le leader** : elles s'en prennent davantage au camp qui domine.
+- **Handicap de production des IA** par chapitre (`handicap` dans `level.ts`) : c'est le réglage de difficulté.
+- **Prolongation** (filet de sécurité contre les impasses) : après 5 min, le plafond de troupes rétrécit.
+
+## Chapitres
 
 1. Premiers pas : glisser, capturer. 1 IA défensive.
-2. Les routes : chemins et carrefours. 1 IA défensive.
+2. Traversées : îles et traversées maritimes. 1 IA défensive.
 3. Interception : 1 IA agressive.
 4. Deux adversaires : opportuniste + défensive.
 5. Trois adversaires : agressive + opportuniste + défensive.
@@ -26,14 +35,19 @@ npm run build
 ## Structure
 
 - `src/engine/` : moteur pur (aucune dépendance au navigateur), testé avec vitest.
-  - `sim.ts` règles : production, envoi, arrivée, interception, victoire
+  - `sim.ts` règles : production, envoi, arrivée, interception, fatigue, prolongation, victoire
+  - `mapgen.ts` génère les cartes de territoires (Voronoï, mers, îles)
   - `ai.ts` IA paramétrable : personnalités, attaques coordonnées sur une même cible
-  - `level.ts` chapitres et cartes
+  - `level.ts` chapitres, cartes, handicaps de difficulté
 - `src/main.ts` : menu, rendu canvas, entrée tactile (pointer events), boucle à pas fixe.
 
 ## Stack
 
 Web (TypeScript, Canvas, Vite) pour prototyper vite et tester sur téléphone. Le moteur étant séparé du rendu, un passage ultérieur à Capacitor ou un autre moteur reste possible.
+
+## Équilibrage
+
+Les réglages de difficulté ont été calibrés avec un bot « humain moyen » (décide toutes les 3 à 6 s). C'est un proxy : à valider en jouant. Si c'est trop dur ou trop facile, ajuster `handicap` par chapitre dans `level.ts`.
 
 ## Critère de sortie de la phase 1
 

@@ -4,7 +4,11 @@ export type OwnerId = number;
 export const NEUTRAL: OwnerId = 0;
 export const PLAYER: OwnerId = 1;
 
-/** Un nœud de la carte : une base capturable, ou un carrefour (`junction`) où les troupes passent. */
+export type Point = [number, number];
+/** Frontière (ou traversée maritime) entre deux territoires, par id. */
+export type Edge = [number, number];
+
+/** Un territoire ; (x, y) est son centre, là où partent et arrivent les troupes. */
 export interface Base {
   id: number;
   x: number;
@@ -12,15 +16,18 @@ export interface Base {
   owner: OwnerId;
   troops: number;
   capacity: number;
-  junction?: boolean;
 }
 
 export interface Squad {
   id: number;
   owner: OwnerId;
   count: number;
-  /** nœuds restants à parcourir ; le dernier est la destination */
+  /** territoire que la troupe vient de quitter */
+  from: number;
+  /** territoires restants à parcourir ; le dernier est la destination */
   path: number[];
+  /** distance déjà parcourue sur la liaison `from` → `path[0]` */
+  progress: number;
   x: number;
   y: number;
 }
@@ -34,8 +41,12 @@ export interface Fight {
 
 export interface GameState {
   bases: Base[];
-  /** voisins de chaque nœud (routes) */
+  /** voisins de chaque territoire */
   links: number[][];
+  /** contour de chaque territoire, pour l'affichage (vide dans les tests) */
+  shapes: Point[][];
+  /** liaisons maritimes entre îles, pour l'affichage */
+  seaLinks: Edge[];
   squads: Squad[];
   fights: Fight[];
   time: number;

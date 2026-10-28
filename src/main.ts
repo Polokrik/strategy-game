@@ -1,15 +1,17 @@
-import { makeAi } from "./engine/ai";
-import { LEVELS, WORLD_H, WORLD_W } from "./engine/level";
+import { LEVELS, WORLD_H, WORLD_W, makeLevelAis } from "./engine/level";
 import { FIGHT_FLASH, findPath, send, step } from "./engine/sim";
 import { type Base, type GameState, NEUTRAL, PLAYER } from "./engine/types";
 
 const COLORS: Record<number, string> = {
-  [NEUTRAL]: "#8a8f98",
+  [NEUTRAL]: "#6b7280",
   [PLAYER]: "#3b82f6",
   2: "#ef4444",
   3: "#f59e0b",
   4: "#a855f7",
 };
+const SEA = "#0b1624";
+/** Un toucher compte pour un territoire s'il tombe à moins de cette distance (unités monde) de son centre. */
+const TOUCH_RANGE = 19;
 const FIXED_DT = 1 / 60;
 const STORAGE_KEY = "conquete.done";
 
@@ -41,7 +43,6 @@ function markDone(i: number): void {
   }
 }
 
-const radius = (b: Base) => 4 + b.capacity / 12;
 const fmtTime = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
 
 function show(screen: "menu" | "intro" | "overlay" | "game"): void {
@@ -80,7 +81,7 @@ function openIntro(i: number): void {
 function start(): void {
   const def = LEVELS[current];
   state = def.build();
-  ais = def.ais.map((a) => makeAi({ owner: a.owner, ...a.personality }));
+  ais = makeLevelAis(def);
   drag = null;
   running = true;
   show("game");
@@ -110,14 +111,13 @@ function toWorld(e: PointerEvent): { x: number; y: number } {
   return { x: (e.clientX * dpr - offX) / scale, y: (e.clientY * dpr - offY) / scale };
 }
 
-/** Base (pas un carrefour) la plus proche du point, avec une zone de toucher généreuse. */
+/** Territoire le plus proche du point (donc celui qui le contient), dans la limite d'une zone de toucher généreuse. */
 function baseAt(x: number, y: number): Base | null {
   let best: Base | null = null;
-  let bestD = Infinity;
+  let bestD = TOUCH_RANGE;
   for (const b of state!.bases) {
-    if (b.junction) continue;
     const d = Math.hypot(b.x - x, b.y - y);
-    if (d < radius(b) * 1.5 && d < bestD) {
+    if (d < bestD) {
       best = b;
       bestD = d;
     }
@@ -152,34 +152,20 @@ $("to-menu").addEventListener("click", showMenu);
 $("back").addEventListener("click", showMenu);
 window.addEventListener("resize", resize);
 
-function drawRoutes(s: GameState): void {
-  ctx.strokeStyle = "rgba(255,255,255,0.14)";
-  ctx.lineWidth = 1;
+function drawSeaLinks(s: GameState): void {
+  ctx.strokeStyle = "rgba(255,255,255,0.35)";
+  ctx.lineWidth = 0.8;
+  ctx.setLineDash([2, 2]);
   ctx.beginPath();
-  s.links.forEach((vs, a) =>
-    vs.forEach((b) => {
-      if (b < a) return;
-      ctx.moveTo(s.bases[a].x, s.bases[a].y);
-      ctx.lineTo(s.bases[b].x, s.bases[b].y);
-    }),
-  );
-  ctx.stroke();
-
-  // carrefours : petits losanges, là où les routes se rejoignent
-  ctx.fillStyle = "rgba(255,255,255,0.35)";
-  for (const b of s.bases) {
-    if (!b.junction) continue;
-    ctx.beginPath();
-    ctx.moveTo(b.x, b.y - 2);
-    ctx.lineTo(b.x + 2, b.y);
-    ctx.lineTo(b.x, b.y + 2);
-    ctx.lineTo(b.x - 2, b.y);
-    ctx.closePath();
-    ctx.fill();
+  for (const [a, b] of s.seaLinks) {
+    ctx.moveTo(s.bases[a].x, s.bases[a].y);
+    ctx.lineTo(s.bases[b].x, s.bases[b].y);
   }
+  ctx.stroke();
+  ctx.setLineDash([]);
 }
 
-/** Aperçu du chemin pendant le glisser : surbrillance de la route, ou croix rouge si impossible. */
+/** Aperçu du chemin pendant le glisser : surbrillance du trajet, ou croix rouge si impossible. */
 function drawDragPreview(s: GameState, d: NonNullable<typeof drag>): void {
   const hover = baseAt(d.x, d.y);
   if (!hover || hover === d.from) {
@@ -215,7 +201,7 @@ function drawDragPreview(s: GameState, d: NonNullable<typeof drag>): void {
 }
 
 function draw(): void {
-  ctx.fillStyle = "#0f1420";
+  ctx.fillStyle = SEA;
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   if (!state) return;
   const s = state;
@@ -225,37 +211,40 @@ function draw(): void {
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
 
-  drawRoutes(s);
+  for (const b of s.bases) {
+    ctx.beginPath();
+    s.shapes[b.id].forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+    ctx.closePath();
+    ctx.globalAlpha = b.owner === NEUTRAL ? 0.55 : 0.8;
+    ctx.fillStyle = COLORS[b.owner];
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    if (drag && drag.from === b) {
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+    }
+  }
+  drawSeaLinks(s);
   if (drag) drawDragPreview(s, drag);
 
   for (const b of s.bases) {
-    if (b.junction) continue;
-    const r = radius(b);
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, r, 0, Math.PI * 2);
-    ctx.fillStyle = COLORS[b.owner];
-    ctx.fill();
-    if (drag && drag.from === b) {
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 1;
-      ctx.stroke();
-    }
     ctx.fillStyle = "#fff";
-    ctx.font = `bold ${r * 0.9}px system-ui, sans-serif`;
+    ctx.font = "bold 6px system-ui, sans-serif";
     ctx.fillText(String(Math.floor(b.troops)), b.x, b.y);
   }
 
   for (const q of s.squads) {
     ctx.beginPath();
-    ctx.arc(q.x, q.y, 1.6, 0, Math.PI * 2);
+    ctx.arc(q.x, q.y, 1.8, 0, Math.PI * 2);
     ctx.fillStyle = COLORS[q.owner];
     ctx.fill();
-    ctx.strokeStyle = "#0f1420";
+    ctx.strokeStyle = "#fff";
     ctx.lineWidth = 0.5;
     ctx.stroke();
     ctx.fillStyle = "#fff";
-    ctx.font = "bold 3px system-ui, sans-serif";
-    ctx.fillText(String(q.count), q.x, q.y - 3.2);
+    ctx.font = "bold 3.4px system-ui, sans-serif";
+    ctx.fillText(String(q.count), q.x, q.y - 3.6);
   }
 
   for (const f of s.fights) {
