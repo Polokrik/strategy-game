@@ -18,6 +18,7 @@
       <button id="back" class="round" aria-label="Retour">‹</button>
       <div id="share" role="img" aria-label="Part des territoires par camp"></div>
       <span id="timer" aria-label="Temps de jeu">0:00</span>
+      <button id="pause-btn" class="round small" aria-label="Pause">II</button>
     </div>
 
     <div id="dock" hidden>
@@ -32,18 +33,29 @@
     </div>
 
     <div id="camp-hud" hidden>
-      <button id="camp-back" class="round" aria-label="Retour au menu">‹</button>
-      <div class="pill" id="camp-when"></div>
-      <div class="pill" id="camp-goal"></div>
+      <div class="row">
+        <button id="camp-back" class="round" aria-label="Retour au menu">‹</button>
+        <div class="pill" id="camp-when"></div>
+        <div class="pill" id="camp-gold" aria-label="Or"><i class="coin"></i><span id="gold-n"></span></div>
+        <button class="pill pill-btn" id="camp-missions">Missions <b id="mission-n"></b></button>
+      </div>
+      <div class="row sub">
+        <div class="pill small" id="camp-goal"></div>
+        <div class="pill small warn" id="camp-threats" hidden></div>
+      </div>
     </div>
+
+    <div id="camp-banner" class="pill" hidden></div>
 
     <div id="camp-panel" class="card" hidden>
       <div class="faction-line"><i id="cp-dot"></i><span id="cp-faction"></span></div>
       <h2 id="cp-name"></h2>
+      <div class="chips" id="cp-chips"></div>
       <p id="cp-note"></p>
       <div class="cp-actions">
-        <button id="cp-attack" class="btn btn-green">Attaquer</button>
-        <button id="cp-pass" class="btn btn-blue">Passer le tour</button>
+        <button id="cp-main" class="btn btn-green">Attaquer</button>
+        <button id="cp-fort" class="btn btn-gold">Forteresse</button>
+        <button id="cp-pass" class="btn btn-blue">Passer</button>
       </div>
     </div>
 
@@ -87,6 +99,29 @@
         </div>
         <div class="actions">
           <button id="chr-ok" class="btn btn-green">Continuer</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="missions" class="screen" hidden>
+      <div class="result">
+        <div class="ribbon"><span>Missions</span></div>
+        <div class="panel chr-panel">
+          <ul id="mission-list"></ul>
+        </div>
+        <div class="actions">
+          <button id="missions-ok" class="btn btn-green">Fermer</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="pause" class="screen" hidden>
+      <div class="result">
+        <div class="ribbon"><span>Pause</span></div>
+        <div class="panel pause-panel"><p id="pause-text"></p></div>
+        <div class="actions">
+          <button id="pause-resume" class="btn btn-green">Reprendre</button>
+          <button id="pause-quit" class="btn btn-blue">Quitter</button>
         </div>
       </div>
     </div>

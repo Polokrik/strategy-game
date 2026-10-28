@@ -5,21 +5,38 @@ import "@fontsource/lilita-one/400.css";
 
 import {
   type CampaignState,
+  DANGER_LABELS,
+  INCOME,
+  type Mission,
+  type Threat,
+  type TurnEvent,
+  type TurnReport,
+  attackerTroops,
   battleLevel,
   canAttack,
-  conquer,
+  canFortify,
+  dangerOf,
+  defenseLevel,
+  defenseOf,
   deserialize,
-  endTurn,
+  fortCost,
+  fortOf,
+  fortify,
   goalOf,
   newCampaign,
+  passTurn,
+  playAttack,
+  playDefense,
   provincesOf,
-  repelled,
   scenarioOf,
   serialize,
   targets,
+  threatOn,
+  threatsOnCrown,
+  winChance,
   yearOf,
 } from "./campaign/campaign";
-import { CROWN, FACTIONS, HISTORY, MAP, PROVINCES, type ProvinceId, SCENARIOS } from "./campaign/france";
+import { CROWN, type FactionId, FACTIONS, HISTORY, MAP, PROVINCES, type ProvinceId, SCENARIOS, agree, tierOf } from "./campaign/france";
 import { CAMPAIGN_WORLD, drawCampaign, provinceAt } from "./campaign/render";
 import { AUTO_THRESHOLDS, autoStatus, makeAutoReinforce, suggestFlags } from "./engine/auto";
 import { LEVELS, type LevelDef, WORLD_H, WORLD_W, makeLevelAis } from "./engine/level";
@@ -41,6 +58,8 @@ const DIFFICULTIES: [string, number][] = [
   ["Normal", 1],
   ["Difficile", 1.2],
 ];
+/** Durée d'une attaque dans l'animation de fin de tour. */
+const PHASE_SECONDS = 1.6;
 
 const $ = (id: string) => document.getElementById(id)!;
 const canvas = $("game") as HTMLCanvasElement;
@@ -53,6 +72,7 @@ let currentDef: LevelDef = LEVELS[0];
 let ais: ((s: GameState, dt: number) => void)[] = [];
 let auto: ((s: GameState, dt: number) => void) | null = null;
 let running = false;
+let paused = false;
 let mode: Mode = "menu";
 let tab: "chapters" | "campaign" = "chapters";
 let selected = 0; // chapitre choisi dans le menu
@@ -65,9 +85,14 @@ let view: View = { w: 1, h: 1, scale: 1, offX: 0, offY: 0 };
 
 // campagne
 let camp: CampaignState | null = null; // la partie en cours (sauvegardée)
+let preview: CampaignState | null = null; // la carte montrée derrière le menu
 let campSelected: ProvinceId | null = null;
-let battleTarget: ProvinceId | null = null; // province attaquée quand une bataille de campagne est en cours
-let pendingLines: string[] = []; // chronique à montrer au retour sur la carte
+/** La bataille de campagne en cours : une attaque, ou la défense d'une province menacée. */
+let battle: { kind: "attack" | "defend"; target: ProvinceId; threat?: Threat } | null = null;
+/** Compte rendu d'une bataille terminée, en attendant que le joueur revienne sur la carte. */
+let pending: { report: TurnReport; before: Record<ProvinceId, FactionId> } | null = null;
+/** L'animation de fin de tour : les attaques défilent une à une sur la carte. */
+let phase: { report: TurnReport; i: number; start: number; view: Record<ProvinceId, FactionId> } | null = null;
 let scenarioPick = 0;
 let difficulty = 1;
 
@@ -97,7 +122,10 @@ const onCampaignMap = () => mode === "campaign" || mode === "chronicle" || (mode
 /** Zone du canvas laissée à la carte, en pixels CSS, selon ce que l'interface recouvre. */
 function mapInsets(): { top: number; bottom: number } {
   if (mode === "menu") return { top: 74, bottom: $("menu-bottom").getBoundingClientRect().height + 20 };
-  if (mode === "campaign") return { top: 62, bottom: $("camp-panel").getBoundingClientRect().height + 20 };
+  if (mode === "campaign") {
+    const bottom = phase ? 70 : $("camp-panel").getBoundingClientRect().height + 20;
+    return { top: 112, bottom };
+  }
   return { top: 62, bottom: $("dock").hidden ? 18 : $("dock").getBoundingClientRect().height + 24 };
 }
 
@@ -146,14 +174,18 @@ function setMode(next: Mode): void {
   $("overlay").hidden = next !== "result";
   $("chronicle").hidden = next !== "chronicle";
   $("camp-hud").hidden = next !== "campaign";
-  $("camp-panel").hidden = next !== "campaign";
+  $("camp-panel").hidden = next !== "campaign" || phase !== null;
+  $("camp-banner").hidden = next !== "campaign" || phase === null;
+  $("missions").hidden = true;
   $("dock").hidden = !(next === "game" && currentDef.auto);
+  if (next !== "game") setPaused(false);
 }
 
 function showMenu(): void {
   running = false;
   drag = null;
-  battleTarget = null;
+  battle = null;
+  phase = null;
   setMode("menu");
   renderMenu();
   layout();
@@ -234,11 +266,9 @@ function renderCampaignMenu(): void {
   state = null;
   preview = saved ?? newCampaign(sc.id, 1);
 }
-let preview: CampaignState | null = null;
 
 function renderAutoDock(): void {
-  const toggle = $("auto-toggle");
-  toggle.setAttribute("aria-pressed", String(autoOn));
+  $("auto-toggle").setAttribute("aria-pressed", String(autoOn));
   $("auto-opts").hidden = !autoOn;
   $("auto").replaceChildren(
     ...AUTO_THRESHOLDS.filter((t) => t > 0).map((t) => {
@@ -284,25 +314,54 @@ function launch(def: LevelDef): void {
 
 function startChapter(): void {
   current = selected;
-  battleTarget = null;
+  battle = null;
   launch(LEVELS[current]);
 }
+
+/* ---------- pause ---------- */
+
+function setPaused(on: boolean): void {
+  paused = on && mode === "game" && running;
+  $("pause").hidden = !paused;
+  if (paused) {
+    $("pause-text").textContent = battle
+      ? battle.kind === "attack"
+        ? "Se retirer compte pour une défaite : la province n'est pas prise et le tour est perdu."
+        : "Se retirer compte pour une défaite : la province tombe."
+      : "La partie est en pause.";
+    $("pause-quit").textContent = battle ? "Se retirer" : "Quitter";
+  }
+}
+
+/** Quitter depuis la pause : un chapitre revient au menu ; une bataille de campagne est une défaite. */
+function quitBattle(): void {
+  if (!battle || !camp) return showMenu();
+  finishCampaignBattle(false, state?.time ?? 0, false);
+}
+
+/* ---------- résultat d'une bataille ---------- */
 
 function showResult(): void {
   if (!state) return;
   const s = state;
   const won = s.winner === PLAYER;
-  const inCampaign = battleTarget !== null && camp !== null;
-  if (inCampaign) {
-    pendingLines = [won ? conquer(camp!, battleTarget!) : repelled(camp!, battleTarget!)];
-    if (camp!.status === "playing") pendingLines.push(...endTurn(camp!));
-    saveCampaign();
-  } else if (won) {
-    markDone(current);
-  }
+  const inCampaign = battle !== null && camp !== null;
+  if (inCampaign) finishCampaignBattle(won, s.time, true);
+  else if (won) markDone(current);
   $("hero").innerHTML = heroSvg(won);
   $("ribbon").className = `ribbon${won ? "" : " lose"}`;
-  $("result").textContent = won ? (inCampaign ? "Province conquise !" : "Victoire !") : inCampaign ? "Repoussé" : "Défaite";
+  const attack = battle?.kind === "attack";
+  $("result").textContent = !inCampaign
+    ? won
+      ? "Victoire !"
+      : "Défaite"
+    : attack
+      ? won
+        ? "Province conquise !"
+        : "Repoussé"
+      : won
+        ? "Province défendue !"
+        : "Province perdue";
   $("stat-time").textContent = fmtTime(s.time);
   $("stat-land").textContent = `${s.bases.filter((b) => b.owner === PLAYER).length}/${s.bases.length}`;
   const next = $("next");
@@ -313,6 +372,27 @@ function showResult(): void {
   if (won) launchConfetti($("confetti"));
   else $("confetti").replaceChildren();
   setMode("result");
+}
+
+/** Applique le résultat d'une bataille de campagne. `showScreen` : passer par l'écran de résultat, sinon retour direct à la carte. */
+function finishCampaignBattle(won: boolean, seconds: number, showScreen: boolean): void {
+  if (!battle || !camp) return;
+  const before = { ...camp.owner };
+  const report =
+    battle.kind === "attack" ? playAttack(camp, battle.target, won, seconds) : playDefense(camp, battle.threat!, won, seconds);
+  saveCampaign();
+  pending = { report, before };
+  running = false;
+  if (!showScreen) afterBattle();
+}
+
+/** De l'écran de résultat à la carte, où les attaques du tour défilent. */
+function afterBattle(): void {
+  const p = pending;
+  pending = null;
+  battle = null;
+  showCampaign();
+  if (p) startPhase(p.report, p.before);
 }
 
 /* ---------- campagne ---------- */
@@ -326,45 +406,219 @@ function openCampaign(c: CampaignState): void {
 function showCampaign(): void {
   if (!camp) return showMenu();
   running = false;
-  battleTarget = null;
+  battle = null;
   campSelected = null;
   setMode("campaign");
   renderCampaign();
   layout();
 }
 
-function renderCampaign(): void {
-  const c = camp!;
+const dots = (n: number) => "●".repeat(n) + "○".repeat(5 - n);
+
+function chip(text: string, cls = ""): HTMLElement {
+  const el = document.createElement("span");
+  el.className = `chip ${cls}`.trim();
+  el.textContent = text;
+  return el;
+}
+
+/** Bandeau du haut : année, or, missions, objectif, attaques annoncées. */
+function renderCampaignHud(c: CampaignState): void {
   $("camp-when").textContent = `${yearOf(c)} · tour ${c.turn + 1}`;
+  $("gold-n").textContent = String(c.gold);
+  $("mission-n").textContent = String(c.missions.length);
   const goal = goalOf(c);
   const held = goal.filter((id) => c.owner[id] === CROWN).length;
-  $("camp-goal").textContent = scenarioOf(c).goal === "all" ? `${provincesOf(c, CROWN).length}/${MAP.provinces.length} provinces` : `Objectif ${held}/${goal.length} ★`;
+  $("camp-goal").textContent =
+    scenarioOf(c).goal === "all" ? `${provincesOf(c, CROWN).length}/${MAP.provinces.length} provinces` : `Objectif ${held}/${goal.length} ★`;
+  const n = threatsOnCrown(c).length;
+  const warn = $("camp-threats");
+  warn.hidden = n === 0;
+  warn.textContent = `⚠ ${n} attaque${n > 1 ? "s" : ""} annoncée${n > 1 ? "s" : ""}`;
+}
 
+/** Fiche de la province choisie : qui la tient, à quel point c'est dur, ce qu'on peut faire. */
+function renderCampaign(): void {
+  const c = camp!;
+  renderCampaignHud(c);
+  const chips = $("cp-chips");
+  const main = $("cp-main") as HTMLButtonElement;
+  const fortBtn = $("cp-fort") as HTMLButtonElement;
   const id = campSelected;
-  const attack = $("cp-attack") as HTMLButtonElement;
+  chips.replaceChildren();
+  fortBtn.hidden = true;
+  main.textContent = "Attaquer";
+  main.disabled = true;
   if (!id) {
     $("cp-dot").style.background = FACTION[CROWN].fill;
     $("cp-faction").textContent = FACTIONS[CROWN].name;
     $("cp-name").textContent = "Choisis une province";
-    $("cp-note").textContent = "Touche une province cerclée d'or pour l'attaquer, ou passe le tour pour laisser le royaume respirer.";
-    attack.disabled = true;
+    const n = threatsOnCrown(c).length;
+    $("cp-note").textContent =
+      n > 0
+        ? "Les flèches montrent qui attaque qui à la fin du tour. Touche une province menacée pour la défendre, ou une province cerclée d'or pour l'attaquer."
+        : "Touche une province cerclée d'or pour l'attaquer, ou passe le tour pour laisser le royaume respirer.";
     return;
   }
+
   const owner = c.owner[id];
+  const fac = FACTIONS[owner];
   const h = HISTORY[id];
+  const level = fortOf(c, id);
   $("cp-dot").style.background = (FACTION[owner] ?? FACTION.neutral).fill;
-  $("cp-faction").textContent = FACTIONS[owner].name;
+  $("cp-faction").textContent = `${fac.name} · ${provincesOf(c, owner).length} prov.${owner === CROWN ? "" : ` · ${fac.style}`}`;
   $("cp-name").textContent = PROVINCES[id].name;
-  const hint = owner === CROWN ? "Province de la Couronne. " : canAttack(c, id) ? "" : "Pas voisine de tes provinces. ";
-  $("cp-note").textContent = `${hint}${h ? `${h.note} (rattachée en ${h.joined}.)` : ""}`;
-  attack.disabled = !canAttack(c, id);
+  const threat = threatOn(c, id);
+
+  if (owner === CROWN) {
+    chips.append(chip(`Revenu +${INCOME[tierOf(id)]} or par tour`), chip(`Forteresse ${level}/3`));
+    fortBtn.hidden = false;
+    const cost = fortCost(c, id);
+    fortBtn.innerHTML = `Forteresse<small>${cost === null ? "niveau max" : `${cost} or`}</small>`;
+    fortBtn.disabled = !canFortify(c, id);
+    if (threat) {
+      const play = Math.round(winChance(c, id, "defend") * 100);
+      const left = Math.round(winChance(c, id, "auto") * 100);
+      chips.append(
+        chip(`⚠ ${FACTIONS[threat.attacker].name}, depuis ${PROVINCES[threat.from].name}`, "alert"),
+        chip(`En jouant ~${play} %`),
+        chip(`Défense auto ~${left} %`, left < 50 ? "alert" : ""),
+      );
+      main.textContent = "Défendre";
+      main.disabled = c.status !== "playing";
+      $("cp-note").textContent = `Défense : ${defenseOf(c, id)} troupes contre ${attackerTroops(c, threat.attacker)}. Sans toi, la défense est automatique, et lente.`;
+    } else {
+      $("cp-note").textContent = `Province de la Couronne, aucune attaque annoncée. ${h ? h.note : ""}`;
+    }
+    return;
+  }
+
+  const attackable = canAttack(c, id);
+  if (attackable) {
+    const danger = dangerOf(winChance(c, id, "attack"));
+    chips.append(
+      chip(`${dots(danger)} ${DANGER_LABELS[danger - 1]}`, `danger-${danger}`),
+      chip(`Ton armée ${attackerTroops(c, CROWN)}`),
+      chip(`Défense ${defenseOf(c, id)}${level ? ` (forteresse ${level})` : ""}`),
+    );
+    main.disabled = false;
+    $("cp-note").textContent = `${h ? `${h.note} (rattachée en ${h.joined}.)` : ""}`;
+  } else {
+    chips.append(chip(`Défense ${defenseOf(c, id)}${level ? ` (forteresse ${level})` : ""}`), chip("Pas voisine de tes provinces"));
+    $("cp-note").textContent = `${h ? `${h.note} (rattachée en ${h.joined}.)` : ""}`;
+  }
+  if (threat) {
+    chips.append(chip(`Attaque : ${FACTIONS[threat.attacker].name}`, "alert"));
+  }
 }
 
-function showChronicle(lines: string[]): void {
+function selectProvince(id: ProvinceId | null): void {
+  campSelected = id;
+  renderCampaign();
+  layout();
+}
+
+function attackOrDefend(): void {
+  if (!camp || !campSelected || camp.status !== "playing") return;
+  const id = campSelected;
+  const threat = threatOn(camp, id);
+  if (camp.owner[id] === CROWN && threat) {
+    battle = { kind: "defend", target: id, threat };
+    launch(defenseLevel(camp, threat));
+  } else if (canAttack(camp, id)) {
+    battle = { kind: "attack", target: id };
+    launch(battleLevel(camp, id));
+  }
+}
+
+function fortifySelected(): void {
+  if (!camp || !campSelected) return;
+  if (fortify(camp, campSelected)) {
+    saveCampaign();
+    renderCampaign();
+  }
+}
+
+function passTheTurn(): void {
+  if (!camp || camp.status !== "playing") return;
+  const before = { ...camp.owner };
+  const report = passTurn(camp);
+  saveCampaign();
+  showCampaign();
+  startPhase(report, before);
+}
+
+/* ---------- missions ---------- */
+
+function missionProgress(c: CampaignState, m: Mission): string {
+  const left = Math.max(0, m.expires - c.turn);
+  const when = left <= 1 ? "dernier tour" : `${left} tours restants`;
+  if (m.n && m.n > 1) return `${Math.min(m.progress, m.n)}/${m.n} · ${when}`;
+  return when;
+}
+
+function showMissions(): void {
+  if (!camp) return;
+  const c = camp;
+  $("mission-list").replaceChildren(
+    ...(c.missions.length ? c.missions : []).map((m) => {
+      const li = document.createElement("li");
+      const text = document.createElement("div");
+      text.className = "mtext";
+      text.textContent = m.text;
+      const small = document.createElement("small");
+      small.textContent = missionProgress(c, m);
+      text.append(small);
+      const reward = document.createElement("div");
+      reward.className = "reward";
+      const coin = document.createElement("i");
+      coin.className = "coin";
+      reward.append(coin, `${m.reward}`);
+      li.append(text, reward);
+      return li;
+    }),
+  );
+  $("missions").hidden = false;
+}
+
+/* ---------- fin de tour : qui attaque qui ---------- */
+
+function describe(e: TurnEvent, verdictShown: boolean): string {
+  const atk = FACTIONS[e.attacker].name;
+  const name = PROVINCES[e.target].name;
+  const base = e.attacker === CROWN ? `La Couronne attaque ${name}` : `${atk} ${agree(atk, "attaque", "attaquent")} ${name}`;
+  if (!verdictShown) return base + "…";
+  return `${base} : ${e.won ? (e.defender === CROWN ? "la province tombe !" : "province prise !") : "attaque repoussée"}`;
+}
+
+function startPhase(report: TurnReport, before: Record<ProvinceId, FactionId>): void {
+  phase = { report, i: 0, start: performance.now(), view: { ...before } };
+  if (report.events.length === 0) return endPhase();
+  $("camp-panel").hidden = true;
+  $("camp-banner").hidden = false;
+  layout();
+}
+
+function endPhase(): void {
+  const report = phase?.report;
+  phase = null;
+  $("camp-banner").hidden = true;
+  $("camp-panel").hidden = false;
+  renderCampaign();
+  layout();
+  if (report) showChronicle(report);
+}
+
+function skipPhase(): void {
+  if (phase) endPhase();
+}
+
+function showChronicle(report: TurnReport): void {
   if (!camp) return;
   $("chr-title").textContent = `Chronique · ${yearOf(camp)}`;
+  const lines = report.lines.length ? report.lines : ["Rien à signaler : le royaume retient son souffle."];
   $("chr-lines").replaceChildren(
-    ...(lines.length ? lines : ["Rien à signaler : le royaume retient son souffle."]).map((l) => {
+    ...lines.map((l) => {
       const li = document.createElement("li");
       li.textContent = l;
       return li;
@@ -396,20 +650,6 @@ function afterChronicle(): void {
   else showCampaign();
 }
 
-function attackSelected(): void {
-  if (!camp || !campSelected || !canAttack(camp, campSelected)) return;
-  battleTarget = campSelected;
-  launch(battleLevel(camp, campSelected));
-}
-
-function passTurn(): void {
-  if (!camp || camp.status !== "playing") return;
-  const lines = endTurn(camp);
-  saveCampaign();
-  showCampaign();
-  showChronicle(lines);
-}
-
 /* ---------- entrée ---------- */
 
 function toggleAuto(id: number): void {
@@ -429,13 +669,13 @@ function toggleAuto(id: number): void {
 
 canvas.addEventListener("pointerdown", (e) => {
   if (mode === "campaign" && camp) {
+    if (phase) return skipPhase();
     const p = toWorld(e);
     const margin = (CAMPAIGN_WORLD.w - MAP.width) / 2;
-    campSelected = provinceAt(p.x - margin, p.y - margin);
-    renderCampaign();
+    selectProvince(provinceAt(p.x - margin, p.y - margin));
     return;
   }
-  if (!running || !state) return;
+  if (!running || paused || !state) return;
   const p = toWorld(e);
   const b = baseAt(p.x, p.y);
   if (b && b.owner === PLAYER) {
@@ -456,20 +696,22 @@ canvas.addEventListener("pointerup", (e) => {
   drag = null;
 });
 canvas.addEventListener("pointercancel", () => (drag = null));
+window.addEventListener("keydown", (e) => {
+  if (e.key === "Escape" && mode === "game") setPaused(!paused);
+});
 $("auto-toggle").addEventListener("click", toggleAutoMode);
 $("play").addEventListener("click", startChapter);
 $("replay").addEventListener("click", startChapter);
 $("next").addEventListener("click", () => {
-  if (battleTarget) {
-    showCampaign();
-    showChronicle(pendingLines);
-    return;
-  }
+  if (pending) return afterBattle();
   selected = Math.min(current + 1, LEVELS.length - 1);
   showMenu();
 });
 $("to-menu").addEventListener("click", showMenu);
-$("back").addEventListener("click", () => (battleTarget ? showCampaign() : showMenu()));
+$("back").addEventListener("click", () => setPaused(true));
+$("pause-btn").addEventListener("click", () => setPaused(true));
+$("pause-resume").addEventListener("click", () => setPaused(false));
+$("pause-quit").addEventListener("click", quitBattle);
 $("tab-chapters").addEventListener("click", () => {
   tab = "chapters";
   showMenu();
@@ -484,8 +726,12 @@ $("c-new").addEventListener("click", () => {
   openCampaign(newCampaign(SCENARIOS[scenarioPick].id, undefined, difficulty));
 });
 $("camp-back").addEventListener("click", showMenu);
-$("cp-attack").addEventListener("click", attackSelected);
-$("cp-pass").addEventListener("click", passTurn);
+$("cp-main").addEventListener("click", attackOrDefend);
+$("cp-fort").addEventListener("click", fortifySelected);
+$("cp-pass").addEventListener("click", passTheTurn);
+$("camp-missions").addEventListener("click", showMissions);
+$("missions-ok").addEventListener("click", () => ($("missions").hidden = true));
+$("camp-threats").addEventListener("click", () => camp && selectProvince(threatsOnCrown(camp)[0]?.target ?? null));
 $("chr-ok").addEventListener("click", afterChronicle);
 window.addEventListener("resize", layout);
 
@@ -516,12 +762,31 @@ function updateShare(s: GameState): void {
   );
 }
 
+/** Fait avancer l'animation de fin de tour et retourne l'attaque affichée. */
+function stepPhase(now: number): { event: TurnEvent; t: number } | null {
+  if (!phase) return null;
+  const events = phase.report.events;
+  const t = (now - phase.start) / 1000 / PHASE_SECONDS;
+  const event = events[phase.i];
+  $("camp-banner").textContent = describe(event, t > 0.55);
+  if (t >= 1) {
+    if (event.won) phase.view[event.target] = event.attacker;
+    phase.i++;
+    phase.start = now;
+    if (phase.i >= events.length) {
+      endPhase();
+      return null;
+    }
+  }
+  return { event, t: Math.min(1, t) };
+}
+
 let last = performance.now();
 let acc = 0;
 function frame(now: number): void {
   acc += Math.min((now - last) / 1000, 0.25);
   last = now;
-  while (running && state && acc >= FIXED_DT) {
+  while (running && !paused && state && acc >= FIXED_DT) {
     for (const ai of ais) ai(state, FIXED_DT);
     auto?.(state, FIXED_DT);
     step(state, FIXED_DT);
@@ -531,13 +796,22 @@ function frame(now: number): void {
       showResult();
     }
   }
-  if (!running) acc = 0;
+  if (!running || paused) acc = 0;
 
   if (onCampaignMap()) {
     const c = mode === "menu" ? preview : camp;
     if (c) {
-      const reachable = mode === "campaign" ? targets(c) : [];
-      drawCampaign(ctx, view, c, mode === "campaign" ? campSelected : null, reachable, goalOf(c), now / 1000);
+      const live = mode === "campaign" && !phase;
+      const anim = mode === "campaign" ? stepPhase(now) : null;
+      drawCampaign(ctx, view, c, {
+        ownerView: phase?.view,
+        selected: live ? campSelected : null,
+        attackable: live ? targets(c) : [],
+        goal: goalOf(c),
+        threats: live ? c.threats : [],
+        anim,
+        time: now / 1000,
+      });
     }
     requestAnimationFrame(frame);
     return;
@@ -556,7 +830,7 @@ function frame(now: number): void {
     count.textContent = `${st.flagged.length}/${st.cap} cases`;
     count.classList.toggle("full", st.flagged.length >= st.cap);
   }
-  drawScene(ctx, view, shown, drag?.from.id ?? null, shown && running ? previewOf(shown) : null, marks);
+  drawScene(ctx, view, shown, drag?.from.id ?? null, shown && running && !paused ? previewOf(shown) : null, marks);
   requestAnimationFrame(frame);
 }
 

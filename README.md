@@ -8,7 +8,7 @@ Les batailles se jouent sur une **carte de territoires** façon mappemonde : des
 
 ## Campagne « histoire de France »
 
-Onglet **Campagne** du menu. Une carte par tours des 26 provinces d'Ancien Régime : en 1180 la Couronne ne tient que trois provinces, à toi de reconstruire le royaume. Chaque attaque est une vraie bataille ; les autres camps jouent entre eux en accéléré (chronique à chaque tour). Deux scénarios (5 provinces, ou toute la France), trois difficultés, sauvegarde automatique. Détail, découpage et mesures : `DESIGN.md`.
+Onglet **Campagne** du menu. Une carte par tours des 26 provinces d'Ancien Régime : en 1180 la Couronne ne tient que trois provinces, à toi de reconstruire le royaume. Les attaques adverses sont **annoncées un tour à l'avance** (flèches) : à chaque tour tu choisis une bataille, **attaquer** une province ou **défendre** une province menacée ; le reste se résout sans toi. Tu gagnes de l'or (revenu, butin, missions) pour poser des **forteresses**. Deux scénarios (5 provinces, ou toute la France), trois difficultés, sauvegarde automatique. Détail, découpage et mesures : `DESIGN.md`.
 
 Les provinces sont construites en fusionnant des départements actuels (`tools/build-france.py`, nécessite `pip install shapely`, génère `src/data/france.json`). Le tableau départements → provinces est approximatif et les dates historiques (`src/campaign/france.ts`) sont à vérifier.
 

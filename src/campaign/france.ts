@@ -11,6 +11,9 @@ import geo from "../data/france.json";
 export type ProvinceId = string;
 export type FactionId = "crown" | "plantagenets" | "flandre" | "empire" | "toulouse" | "bourgogne" | "champagne" | "neutral";
 
+/** Accorde le verbe avec un nom de camp : « Les Plantagenêts attaquent », « Le comté de Flandre attaque ». */
+export const agree = (name: string, singular: string, plural: string): string => (name.startsWith("Les ") ? plural : singular);
+
 export const CROWN: FactionId = "crown";
 export const NEUTRAL_FACTION: FactionId = "neutral";
 
@@ -82,6 +85,8 @@ export interface Faction {
   personality: Personality;
   /** multiplicateur de production de ses troupes en bataille : le réglage de difficulté */
   handicap: number;
+  /** manière de se battre, affichée au joueur */
+  style: "agressifs" | "défensifs" | "opportunistes";
   /** probabilité d'attaquer à chaque tour */
   aggression: number;
   /** poids supplémentaire des cibles qui appartiennent à la Couronne */
@@ -89,14 +94,14 @@ export interface Faction {
 }
 
 export const FACTIONS: Record<FactionId, Faction> = {
-  crown: { id: "crown", name: "La Couronne", personality: DEFENSIVE, handicap: 1, aggression: 0, hostility: 0 },
-  plantagenets: { id: "plantagenets", name: "Les Plantagenêts", personality: AGGRESSIVE, handicap: 0.6, aggression: 0.5, hostility: 3 },
-  flandre: { id: "flandre", name: "Le comté de Flandre", personality: OPPORTUNIST, handicap: 0.6, aggression: 0.35, hostility: 1 },
-  empire: { id: "empire", name: "Le Saint-Empire", personality: DEFENSIVE, handicap: 0.6, aggression: 0.3, hostility: 0 },
-  toulouse: { id: "toulouse", name: "Le comté de Toulouse", personality: OPPORTUNIST, handicap: 0.6, aggression: 0.3, hostility: 0 },
-  bourgogne: { id: "bourgogne", name: "Le duché de Bourgogne", personality: DEFENSIVE, handicap: 0.6, aggression: 0.25, hostility: 1 },
-  champagne: { id: "champagne", name: "Le comté de Champagne", personality: DEFENSIVE, handicap: 0.6, aggression: 0.25, hostility: 0 },
-  neutral: { id: "neutral", name: "Terres indépendantes", personality: DEFENSIVE, handicap: 0.5, aggression: 0, hostility: 0 },
+  crown: { id: "crown", name: "La Couronne", personality: DEFENSIVE, style: "défensifs", handicap: 1, aggression: 0, hostility: 0 },
+  plantagenets: { id: "plantagenets", name: "Les Plantagenêts", personality: AGGRESSIVE, style: "agressifs", handicap: 0.6, aggression: 0.5, hostility: 3 },
+  flandre: { id: "flandre", name: "Le comté de Flandre", personality: OPPORTUNIST, style: "opportunistes", handicap: 0.6, aggression: 0.35, hostility: 1 },
+  empire: { id: "empire", name: "Le Saint-Empire", personality: DEFENSIVE, style: "défensifs", handicap: 0.6, aggression: 0.3, hostility: 0 },
+  toulouse: { id: "toulouse", name: "Le comté de Toulouse", personality: OPPORTUNIST, style: "opportunistes", handicap: 0.6, aggression: 0.3, hostility: 0 },
+  bourgogne: { id: "bourgogne", name: "Le duché de Bourgogne", personality: DEFENSIVE, style: "défensifs", handicap: 0.6, aggression: 0.25, hostility: 1 },
+  champagne: { id: "champagne", name: "Le comté de Champagne", personality: DEFENSIVE, style: "défensifs", handicap: 0.6, aggression: 0.25, hostility: 0 },
+  neutral: { id: "neutral", name: "Terres indépendantes", personality: DEFENSIVE, style: "défensifs", handicap: 0.5, aggression: 0, hostility: 0 },
 };
 
 /** Les camps adverses, dans l'ordre où ils jouent. */

@@ -96,11 +96,11 @@ Hors MVP : époques, civilisation, automatisation, PC long, monde complet, tutor
 Direction fixée : lisibilité type State.io sur la carte, charme cartoon type Civilization dans l'habillage. Détail, tokens et emprunts : `docs/STYLE.md`. Aucune monétisation reprise des références (pubs, gemmes, packs, vidéo contre récompense).
 
 ### Renforts automatiques (demande de Paul)
-**Spécification** : le joueur **coche** (d'un toucher sur le territoire) les territoires à automatiser, dans la limite d'**un sixième de ses territoires** (compteur « X/Y territoires » dans l'interface, pastille à chevrons sur la carte). Un territoire coché **de l'arrière** (aucun voisin hostile) qui atteint le seuil choisi (**10, 20 ou 30**, ou désactivé) envoie toutes ses troupes sauf une vers le front le plus proche, en passant par les territoires du joueur. Aucune perte en route. Le passif ne choisit jamais d'attaquer. Réservé au joueur, comme les jokers. Introduit par un chapitre dédié (« Renforts »).
+**Spécification (v3)** : un bouton **« Renforts auto »** toujours visible, grisé tant qu'il n'est pas activé, qu'on active d'un toucher : les meilleurs territoires de l'arrière sont alors cochés d'office, le joueur peut en changer d'un toucher sur un territoire. Le nombre de cases est **un dixième des territoires de la carte, au moins un** (1 sur les petites cartes, 2 sur 25 territoires), affiché « X/Y cases ». Un territoire coché **de l'arrière** (aucun voisin hostile) qui atteint le seuil (**10, 20 ou 30**) envoie toutes ses troupes sauf une vers le front le plus proche, en passant par les territoires du joueur. Aucune perte en route. Le passif ne choisit jamais d'attaquer. Réservé au joueur, comme les jokers. Introduit par un chapitre dédié (« Renforts »), puis disponible dans les batailles de campagne.
 
 **Écart avec ce document** : l'automatisation était hors MVP (phase 5, débloquée par la technologie, avec un plafond). Elle est avancée avant la campagne, avec un plafond.
 
-**Pourquoi un sixième et pas un tiers (mesuré, joueur lent qui décide toutes les 6 s, 24 parties par case, marge ±10 points, victoire sans renforts ~30 %)** : un tiers donne 92 % au seuil 10, soit aucune borne en pratique ; un sixième 75-83 % ; un huitième 54-63 %. La cause : les renforts vident en continu les territoires de l'arrière qui, pleins, ne produisent plus. Plafonner le nombre de convois, les ralentir ou les taxer (25 %, 40 %) ne change presque rien ; seul le **nombre de territoires automatisés** borne l'effet. Le ratio est le réglage `AUTO_RATIO` (`src/engine/auto.ts`). Le seuil 10 domine toujours les seuils 20 et 30 : ce n'est pas encore une vraie décision.
+**Pourquoi si peu de cases (mesuré, joueur lent qui décide toutes les 6 s, 24 parties par case, marge ±10 points, victoire sans renforts ~30 %, carte de 25 territoires)** : 4 cases donnent 92-96 % au seuil 10, 3 cases 83-88 %, 2 cases 75-88 %, 1 case 46-83 % ; au-delà de 2 cases plus rien ne borne. À 1/10 de la carte (2 cases sur 25), l'aide reste forte mais pas écrasante. Paul a demandé un ratio sur la carte plutôt que sur les provinces possédées, avec au moins une case : attendre 6 territoires pour en automatiser un était inutile. La cause : les renforts vident en continu les territoires de l'arrière qui, pleins, ne produisent plus. Plafonner le nombre de convois, les ralentir ou les taxer (25 %, 40 %) ne change presque rien ; seul le **nombre de territoires automatisés** borne l'effet. Le ratio est le réglage `AUTO_RATIO` (`src/engine/auto.ts`). Le seuil 10 domine toujours les seuils 20 et 30 : ce n'est pas encore une vraie décision.
 
 **Déblocage futur** : le plafond est le bouton naturel d'une progression (le ratio ou le nombre de seuils) débloquée par la technologie de la phase 5, ce qui respecte la règle du document. Une **vente en boutique** d'un avantage de jeu la contredit (« rien qui s'achète ne donne un avantage en partie ») : soit le déblocage se gagne en jouant, soit la boutique reste cosmétique, soit la règle est changée explicitement. Rien n'est construit : le point d'accroche est le drapeau `auto` du chapitre et `AUTO_RATIO`.
 
@@ -118,7 +118,7 @@ Le patron de fiche de commandant des références (compétence, % de garnison, c
 | 2. IA et variété | **Fait** : 3 personnalités, 1 à 3 adversaires, 6 chapitres (une notion chacun) | valider l'équilibrage en jeu réel (calibré avec un bot) |
 | 3. Jokers | Non commencé | ralenti d'abord, jauge de charge, plafond par partie, écran de fiche (patron de la référence) |
 | 4. Mini-campagne | **Tranche verticale jouable** (itération 3) : carte des 26 provinces, tours, une bataille par province, chronique, sauvegarde, 2 scénarios dont la mini-campagne de 5 territoires | valider l'équilibrage en jeu réel, fortifier, population, événements, vérifier les données historiques |
-| 5. Époques et civilisation | Partiel : paliers **visuels** (disques) et renforts bornés | paliers de bases comme mécanique (village, ville, capitale), époques, déblocage du plafond des renforts par la technologie |
+| 5. Époques et civilisation | Partiel : paliers **visuels** (disques), renforts bornés, **forteresses, or, missions** (itération 4) | paliers de bases comme mécanique (village, ville, capitale), époques, déblocage du plafond des renforts par la technologie |
 | 6. Extensions | Non commencé | campagnes historiques, mode long, PC, modèle économique |
 
 **Chantiers non listés dans ce document** : choix et source des cartes réelles (phase 4 en dépend), installation sur téléphone (le jeu tourne dans un navigateur ; plein écran, icône, ensuite Capacitor), sons et retours haptiques, sauvegarde (aujourd'hui seulement les coches de chapitres), réglages, daltonisme (emblème par camp).
@@ -153,3 +153,36 @@ La carte jointe par Paul montre des **provinces historiques** (Flandre-Artois, G
 - **Précipice de compétence** (bot orienté objectif, scénario à 5 provinces) : un joueur qui décide toutes les 4 s gagne 24 campagnes sur 24 en 4,6 tours ; à 6 s, 0 sur 24 en 40 tours (la Normandie tenue par les Plantagenêts, IA agressive, grande carte, est imbattable). Impossible de calibrer sans voir jouer Paul : d'où le **sélecteur de difficulté**, à régler avec son ressenti.
 - **La population ne compte pas encore** : le bonus de troupes de départ (+2 par province, plafonné à +20) ne change presque pas les résultats (3 provinces contre 18 : mêmes taux). Le design doc voulait que la population gonfle les troupes et débloque des paliers ; à décider (bonus plus fort, ou capacité des bases).
 - **Non fait** : fortifier une province (le doc le prévoit), événements aléatoires, personnalités historiques, forces des camps dépendant des provinces tenues, Corse jouable en bataille d'île, paliers de bases, époques.
+
+
+---
+
+## Itération 4 : lisibilité de la campagne et économie (tranches A et B)
+
+### Réponses de Paul
+- **Monnaie** gagnée uniquement en jouant (butin, revenu des provinces, missions) ; **pas de boutique** pour l'instant, « déjà un jeu solide, et après on verra ». Aucune monnaie premium, aucune pub.
+- **Progression par campagne**, pas de persistance entre campagnes. Des améliorations **permanentes** pourront exister dans un futur mode **solo rapide « puzzle / grind »**, seul candidat à une monétisation.
+- Les **améliorations de statistiques** de l'armée (comme la référence) rendraient l'équilibrage caduc : on se concentre sur la **défense** (forteresses) et, plus tard, des **unités** (idée d'un taux d'apparition à évaluer ; non fait, voir plus bas).
+- **Mode monde** : plus tard, avec des **pauses pour donner des ordres** (et accéder au menu).
+- **« Fais ton histoire »** : commencer tôt dans une région ou un département de son choix pour conquérir le reste.
+
+### Ce qui est fait
+- **Qui attaque qui** : chaque camp adverse **annonce** son attaque un tour à l'avance (flèche de sa couleur, alerte sur la province menacée). À la fin du tour les attaques défilent sur la carte (flèche, verdict vu du côté du joueur) avant la chronique.
+- **Défendre quand c'est à risque** : le joueur a **une bataille par tour**, à choisir entre attaquer une province et défendre une province menacée (il joue alors la bataille côté défenseur). Les autres attaques sont résolues sans lui, avec une **défense automatique lente** (une décision toutes les 8 s). Se retirer d'une bataille compte pour une défaite.
+- **Puissance et difficulté** : la fiche d'une province affiche la **difficulté estimée** en cinq niveaux (Facile à Très dur, par 8 simulations à graines fixes avec un joueur moyen), les troupes de départ de chaque camp, le style du camp adverse (agressif, défensif, opportuniste), et, pour une province menacée, les deux chances de tenir : **en jouant** ou **par défense automatique**.
+- **Or** : revenu par tour selon la taille des provinces (2, 3 ou 4), butin d'une conquête (10, 16 ou 24) ou d'une défense gagnée (8).
+- **Forteresses** (3 niveaux, 40 / 70 / 110 or) : +6 troupes de départ **et** +15 % de production du défenseur par niveau. Les camps adverses se fortifient d'eux-mêmes au contact de la Couronne, tous les 3 tours, jusqu'au niveau 2 (la pression monte avec le temps).
+- **Missions** (3 actives, un type de chaque) : prendre une province, tenir N provinces, **défendre en personne** une province menacée, gagner une bataille en moins de 90 s, construire 2 forteresses. Chacune verse de l'or, expire sans pénalité.
+- **Pause** pendant une bataille (reprendre, quitter). Pour l'instant elle ne permet **pas** de donner des ordres.
+
+### Mesures qui ont changé la conception
+- **Défense automatique** : à une décision toutes les 4-6 s elle tient presque tout, donc aucune menace n'avait d'enjeu. À 8 s : une petite province tient (80-100 %), mais une province moyenne ou grande attaquée par les Plantagenêts agressifs tombe (0-5 %). C'est le réglage retenu.
+- **Forteresses** : à +6 troupes seulement l'effet était négligeable (une bataille se joue sur la production). Avec +15 % de production par niveau, une province moyenne attaquée par les Plantagenêts passe de 5 % à 65 % de chances de tenir avec 3 niveaux (défense auto à 8 s), une grande de 0 à 40 %.
+- **Missions** : les premières versions payaient sans rien faire (« aucune perte pendant 4 tours », « repousse 2 attaques » : un joueur passif gagnait 446 or de missions en 40 tours). Elles récompensent maintenant une action.
+- **Campagne complète** (joueur moyen) : un joueur actif gagne le scénario à 5 provinces en ~5 tours ; un joueur passif perd en moyenne 1,5 province en 40 tours sans être effacé.
+
+### Pas fait, et pourquoi
+- **Unités et taux d'apparition** : nouveaux types de troupes (vitesse, force) touchent le cœur du moteur de bataille (trajets, interceptions, IA) et son équilibrage ; ce serait la tranche C avec les époques (une unité par époque).
+- **Pause avec ordres** : elle supprimerait le « précipice de compétence » mesuré plus haut (un joueur lent jouerait comme un rapide), mais change la nature du jeu ; à trancher avant le mode monde.
+- **L'or s'accumule** : les bots de test finissent avec 200 à 900 or non dépensé. Les coûts et revenus sont à régler quand on aura vu jouer Paul.
+- **La population ne pèse toujours pas** dans les batailles.

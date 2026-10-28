@@ -98,3 +98,13 @@ Rapports de contraste mesurés :
 - Ce mélange (lisibilité State.io + charme Civilization) est-il le bon dosage ? Plus « Civilization » voudrait dire parchemin, ornements, palette plus chaude.
 - Mascotte : dessin maison provisoire.
 - Sons et retours haptiques : rien de prévu pour l'instant.
+
+
+## Campagne : or, menaces, missions, pause
+
+- **Or** : pastille avec une pièce (rond doré à contour encre) ; même pièce dans les récompenses de mission et les prix. Bouton **doré** (`btn-gold`) pour les achats (forteresse), vert pour l'action principale, bleu pour passer.
+- **Attaque annoncée** : flèche en arc de la couleur foncée de l'attaquant, pointillés qui avancent ; plus épaisse et accompagnée d'un triangle d'alerte rouge quand elle vise la Couronne.
+- **Verdict d'une attaque (animation de fin de tour)** : coche si la province change de main, croix si l'attaque est repoussée ; vert si c'est bon pour la Couronne, rouge si c'est mauvais, ambre entre deux autres camps.
+- **Forteresse** : petit château gris sous le nom de la province, un par niveau (3 au plus).
+- **Difficulté** : cinq niveaux, du vert (facile) au rouge (très dur), cinq points pleins ou vides et un mot (Facile, Abordable, Disputé, Dur, Très dur). Ne jamais donner la difficulté par la couleur seule.
+- **Pause / Missions** : mêmes écrans sombres que la chronique (ruban, panneau lavande).
