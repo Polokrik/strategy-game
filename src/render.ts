@@ -291,17 +291,39 @@ function drawSquads(ctx: CanvasRenderingContext2D, s: GameState): void {
     const dx = (next.x - q.x) / len;
     const dy = (next.y - q.y) / len;
     const dots = Math.min(14, Math.max(2, Math.ceil(q.count / 2.5)));
+    const mounted = (s.speedMul[q.owner] ?? 1) > 1;
     for (let i = dots - 1; i >= 0; i--) {
       const back = i * 1.95;
       const side = (i % 2 ? 1 : -1) * 0.95;
       const x = q.x - dx * back - dy * side;
       const y = q.y - dy * back + dx * side;
       ctx.beginPath();
-      ctx.arc(x, y, i === 0 ? 2.2 : 1.7, 0, Math.PI * 2);
+      if (mounted) ctx.ellipse(x, y, i === 0 ? 3.1 : 2.4, i === 0 ? 1.8 : 1.4, Math.atan2(dy, dx), 0, Math.PI * 2); // cavaliers : corps allongés
+      else ctx.arc(x, y, i === 0 ? 2.2 : 1.7, 0, Math.PI * 2);
       ctx.fillStyle = t.dark;
       ctx.fill();
       ctx.strokeStyle = "#fff";
       ctx.lineWidth = 0.45;
+      ctx.stroke();
+    }
+    if (mounted) {
+      // fanion en tête de colonne : une hampe et un triangle aux couleurs du camp
+      const hx = q.x + dx * 3.2;
+      const hy = q.y + dy * 3.2;
+      ctx.strokeStyle = INK;
+      ctx.lineWidth = 0.6;
+      ctx.beginPath();
+      ctx.moveTo(hx, hy);
+      ctx.lineTo(hx, hy - 5.5);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(hx, hy - 5.5);
+      ctx.lineTo(hx + 4.2, hy - 4);
+      ctx.lineTo(hx, hy - 2.6);
+      ctx.closePath();
+      ctx.fillStyle = t.fill;
+      ctx.fill();
+      ctx.strokeStyle = INK;
       ctx.stroke();
     }
     ctx.font = `700 4px ${FONT_BODY}`;
