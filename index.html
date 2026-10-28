@@ -13,11 +13,29 @@
   </head>
   <body>
     <canvas id="game"></canvas>
-    <div id="hud"><span id="timer">0:00</span></div>
-    <div id="overlay" hidden>
+    <div id="hud" hidden>
+      <button id="back" aria-label="Menu">‹</button>
+      <span id="timer">0:00</span>
+    </div>
+
+    <div id="menu" class="screen">
+      <h1>Conquête</h1>
+      <div id="chapters"></div>
+    </div>
+
+    <div id="intro" class="screen" hidden>
+      <p id="intro-chapter"></p>
+      <h1 id="intro-title"></h1>
+      <p id="intro-notion"></p>
+      <button id="play">Jouer</button>
+    </div>
+
+    <div id="overlay" class="screen" hidden>
       <h1 id="result"></h1>
       <p id="detail"></p>
       <button id="replay">Rejouer</button>
+      <button id="next" class="secondary">Chapitre suivant</button>
+      <button id="to-menu" class="secondary">Menu</button>
     </div>
     <script type="module" src="/src/main.ts"></script>
   </body>

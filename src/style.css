@@ -22,42 +22,90 @@ body {
   top: max(8px, env(safe-area-inset-top));
   left: 0;
   right: 0;
-  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   font-variant-numeric: tabular-nums;
-  opacity: 0.7;
   pointer-events: none;
 }
 
-#overlay {
+#hud span {
+  opacity: 0.7;
+}
+
+#back {
+  position: absolute;
+  left: 8px;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.08);
+  color: #e8ecf4;
+  font-size: 1.6rem;
+  line-height: 1;
+  pointer-events: auto;
+}
+
+.screen {
   position: fixed;
   inset: 0;
+  box-sizing: border-box;
+  padding: 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  background: rgba(15, 20, 32, 0.85);
+  gap: 10px;
+  text-align: center;
+  background: rgba(15, 20, 32, 0.92);
 }
 
-#overlay[hidden] {
+.screen[hidden],
+#hud[hidden] {
   display: none;
 }
 
-#overlay h1 {
+.screen h1 {
   margin: 0;
   font-size: 2.2rem;
 }
 
-#overlay p {
-  margin: 0 0 12px;
-  opacity: 0.7;
+.screen p {
+  margin: 0;
+  max-width: 28rem;
+  line-height: 1.45;
+  opacity: 0.75;
 }
 
-#overlay button {
+#chapters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: min(100%, 22rem);
+  margin-top: 12px;
+}
+
+button {
   padding: 12px 28px;
-  font-size: 1.1rem;
+  font-size: 1.05rem;
   border: 0;
   border-radius: 10px;
   background: #3b82f6;
   color: #fff;
+}
+
+button.secondary,
+#chapters button {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+#chapters button {
+  display: flex;
+  justify-content: space-between;
+  text-align: left;
+}
+
+#chapters .done {
+  color: #4ade80;
 }

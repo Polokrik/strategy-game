@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { createState, send, step } from "./sim";
+import { createState, findPath, send, step } from "./sim";
 import { NEUTRAL, PLAYER } from "./types";
 
 const ENEMY = 2;
@@ -69,7 +69,7 @@ describe("interception", () => {
     ]);
     send(s, 0, 1, PLAYER); // 10
     send(s, 1, 0, ENEMY); // 6
-    for (let i = 0; i < 20; i++) step(s, 0.1); // rencontre vers 1,4 s
+    for (let i = 0; i < 30; i++) step(s, 0.1); // rencontre vers 2,1 s
     expect(s.squads).toHaveLength(1);
     expect(s.squads[0].owner).toBe(PLAYER);
     expect(s.squads[0].count).toBe(4);
@@ -83,7 +83,7 @@ describe("interception", () => {
     ]);
     send(s, 0, 1, PLAYER);
     send(s, 1, 0, PLAYER);
-    for (let i = 0; i < 20; i++) step(s, 0.1);
+    for (let i = 0; i < 30; i++) step(s, 0.1);
     expect(s.squads).toHaveLength(2);
   });
 });
@@ -97,5 +97,69 @@ describe("victoire", () => {
     send(s, 0, 1, PLAYER);
     for (let i = 0; i < 20; i++) step(s, 0.1);
     expect(s.winner).toBe(PLAYER);
+  });
+});
+
+describe("routes et carrefours", () => {
+  // A(0,0) - J(30,0) - B(60,0) ; la ligne droite A-B n'existe pas
+  const road = (bOwner = NEUTRAL) =>
+    createState(
+      [
+        { x: 0, y: 0, owner: PLAYER, troops: 20, capacity: 50 },
+        { x: 30, y: 0, owner: NEUTRAL, troops: 0, capacity: 0, junction: true },
+        { x: 60, y: 0, owner: bOwner, troops: 3, capacity: 50 },
+        { x: 99, y: 99, owner: ENEMY, troops: 5, capacity: 50 },
+      ],
+      [
+        [0, 1],
+        [1, 2],
+      ],
+    );
+
+  it("passe par le carrefour pour atteindre la destination", () => {
+    const route = findPath(road(), 0, 2, PLAYER);
+    expect(route?.path).toEqual([1, 2]);
+    expect(route?.length).toBeCloseTo(60);
+  });
+
+  it("refuse un chemin inexistant", () => {
+    expect(send(road(), 0, 3, PLAYER)).toBe(false);
+  });
+
+  it("refuse de viser un carrefour", () => {
+    expect(send(road(), 0, 1, PLAYER)).toBe(false);
+  });
+
+  it("une base neutre ou ennemie bloque le passage, la sienne se traverse", () => {
+    const nodes = (mid: number) => [
+      { x: 0, y: 0, owner: PLAYER, troops: 20, capacity: 50 },
+      { x: 30, y: 0, owner: mid, troops: 5, capacity: 50 },
+      { x: 60, y: 0, owner: NEUTRAL, troops: 3, capacity: 50 },
+    ];
+    const edges: [number, number][] = [
+      [0, 1],
+      [1, 2],
+    ];
+    expect(findPath(createState(nodes(NEUTRAL), edges), 0, 2, PLAYER)).toBeNull();
+    expect(findPath(createState(nodes(ENEMY), edges), 0, 2, PLAYER)).toBeNull();
+    expect(findPath(createState(nodes(PLAYER), edges), 0, 2, PLAYER)?.path).toEqual([1, 2]);
+  });
+
+  it("la troupe arrive à destination en suivant la route", () => {
+    const s = road();
+    send(s, 0, 2, PLAYER); // 10 troupes contre 3
+    for (let i = 0; i < 60; i++) step(s, 0.1);
+    expect(s.bases[2].owner).toBe(PLAYER);
+  });
+
+  it("deux troupes qui se croisent au carrefour s'interceptent et laissent une trace", () => {
+    const s = road(ENEMY);
+    s.bases[2].troops = 12;
+    send(s, 0, 2, PLAYER); // 10
+    send(s, 2, 0, ENEMY); // 6
+    for (let i = 0; i < 25; i++) step(s, 0.1); // rencontre vers 2,1 s
+    expect(s.fights.length).toBeGreaterThan(0);
+    expect(s.squads).toHaveLength(1);
+    expect(s.squads[0].owner).toBe(PLAYER);
   });
 });
