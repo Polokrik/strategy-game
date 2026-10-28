@@ -148,7 +148,10 @@ export interface Scenario {
   /** provinces à détenir pour gagner, ou toutes */
   goal: ProvinceId[] | "all";
   startYear: number;
+  /** rythme du calendrier quand il ne suit pas la conquête */
   yearsPerTurn: number;
+  /** si présent, la date suit la conquête : elle atteint cette année quand l'objectif est rempli */
+  endYear?: number;
 }
 
 export const SCENARIOS: Scenario[] = [
@@ -160,6 +163,7 @@ export const SCENARIOS: Scenario[] = [
     goal: ["normandie", "anjou-touraine", "maine", "poitou", "picardie"],
     startYear: 1180,
     yearsPerTurn: 3,
+    endYear: 1223,
   },
   {
     id: "la-france-se-fait",
@@ -169,6 +173,7 @@ export const SCENARIOS: Scenario[] = [
     goal: "all",
     startYear: 1180,
     yearsPerTurn: 3,
+    endYear: 1768,
   },
   {
     id: "fais-ton-histoire",

@@ -44,6 +44,7 @@ export function createState(bases: Omit<Base, "id">[], edges?: Edge[]): GameStat
     time: 0,
     nextSquadId: 1,
     productionMul: {},
+    speedMul: {},
     winner: null,
   };
 }
@@ -166,7 +167,7 @@ export function step(s: GameState, dt: number): void {
     const from = s.bases[q.from];
     const to = s.bases[q.path[0]];
     const len = gap(from, to);
-    q.progress += SQUAD_SPEED * dt;
+    q.progress += SQUAD_SPEED * (s.speedMul[q.owner] ?? 1) * dt;
     if (q.progress < len) {
       const f = q.progress / len;
       q.x = from.x + (to.x - from.x) * f;

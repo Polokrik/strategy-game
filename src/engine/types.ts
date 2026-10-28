@@ -53,6 +53,8 @@ export interface GameState {
   nextSquadId: number;
   /** multiplicateur de production par camp (1 par défaut) */
   productionMul: Record<OwnerId, number>;
+  /** vitesse des troupes en marche (cavalerie des époques avancées) ; 1 par défaut */
+  speedMul: Record<OwnerId, number>;
   /** null tant que la partie est en cours */
   winner: OwnerId | null;
 }

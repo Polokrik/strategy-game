@@ -22,6 +22,7 @@ import {
   defenseLevel,
   defenseOf,
   deserialize,
+  eraOf,
   fortCost,
   fortOf,
   fortify,
@@ -512,7 +513,7 @@ function renderCampaign(): void {
   main.disabled = true;
   if (!id) {
     $("cp-dot").style.background = FACTION[CROWN].fill;
-    $("cp-faction").textContent = FACTIONS[CROWN].name;
+    $("cp-faction").textContent = `${FACTIONS[CROWN].name} · ${eraOf(c).name}`;
     $("cp-name").textContent = "Choisis une province";
     const n = threatsOnCrown(c).length;
     $("cp-note").textContent =
@@ -748,7 +749,7 @@ function showChronicle(report: TurnReport): void {
 function showCampaignEnd(): void {
   const c = camp!;
   const won = c.status === "won";
-  const years = c.turn * scenarioOf(c).yearsPerTurn;
+  const years = yearOf(c) - scenarioOf(c).startYear;
   $("hero").innerHTML = heroSvg(won);
   $("ribbon").className = `ribbon${won ? "" : " lose"}`;
   $("result").textContent = won ? "Objectif atteint !" : "La Couronne s'efface";

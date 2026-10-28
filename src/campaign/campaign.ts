@@ -31,8 +31,11 @@ import {
   type TurnReport,
   autoSlotCost,
   canBuyAutoSlot,
+  CAVALRY_SPEED,
   canFortify,
   draw,
+  eraIndex,
+  eraOf,
   fortCost,
   fortOf,
   goalReached,
@@ -73,10 +76,13 @@ export function newCampaign(
     threats: [],
     fort: {},
     autoSlots: 0,
+    reach: 0,
+    reach0: 0,
     gold: START_GOLD,
     missions: [],
     nextMissionId: 1,
   };
+  c.reach = c.reach0 = provincesOf(c, CROWN).length;
   c.threats = planThreats(c);
   fillMissions(c);
   return c;
@@ -120,6 +126,12 @@ function battleState(tier: Tier, bottom: number, top: number, seed: number): Gam
   return s;
 }
 
+/** Les avantages de l'époque du joueur : la cavalerie, dès le Royaume. */
+function withEra(c: CampaignState, s: GameState): GameState {
+  if (eraIndex(c.reach) >= 1) s.speedMul[START.owner] = CAVALRY_SPEED;
+  return s;
+}
+
 const hashOf = (s: string): number => [...s].reduce((h, ch) => (Math.imul(h, 31) + ch.charCodeAt(0)) | 0, 7);
 const battleSeed = (c: CampaignState, target: ProvinceId): number => Math.abs((c.seed ^ hashOf(target)) | 0) % 100000;
 
@@ -134,7 +146,7 @@ export function battleLevel(c: CampaignState, target: ProvinceId): LevelDef {
     ais: [{ owner: FOE.owner, personality: foe.personality, handicap: foe.handicap * pressure(c) * fortMul(c, target) }],
     auto: true,
     autoBonus: c.autoSlots,
-    build: () => battleState(tierOf(target), attackerTroops(c, CROWN), defenseOf(c, target), seed),
+    build: () => withEra(c, battleState(tierOf(target), attackerTroops(c, CROWN), defenseOf(c, target), seed)),
   };
 }
 
@@ -151,7 +163,7 @@ export function defenseLevel(c: CampaignState, t: Threat): LevelDef {
     build: () => {
       const s = battleState(tierOf(t.target), defenseOf(c, t.target), attackerTroops(c, t.attacker), seed);
       s.productionMul[START.owner] = fortMul(c, t.target); // le joueur défend derrière ses murs
-      return s;
+      return withEra(c, s);
     },
   };
 }
@@ -415,6 +427,12 @@ function advance(c: CampaignState, play?: Play): TurnReport {
   for (const m of expired) r.lines.push(say(c, `Mission expirée : ${m.text}.`));
 
   c.turn++;
+  const era = eraIndex(c.reach);
+  c.reach = Math.max(c.reach, provincesOf(c, CROWN).length);
+  if (eraIndex(c.reach) > era) {
+    const e = eraOf(c);
+    r.lines.push(say(c, `Nouvelle époque : ${e.name}. ${e.perk}`));
+  }
   if (provincesOf(c, CROWN).length === 0) c.status = "lost";
   else if (goalReached(c)) c.status = "won";
   if (c.status === "playing") {
@@ -457,6 +475,8 @@ export function deserialize(raw: string | null): CampaignState | null {
     c.fort ??= {};
     c.gold ??= 0;
     c.autoSlots ??= 0;
+    c.reach ??= provincesOf(c, CROWN).length;
+    c.reach0 ??= Math.min(c.reach, 3);
     c.missions ??= [];
     c.nextMissionId ??= 1;
     if (c.status === "playing" && c.missions.length === 0) fillMissions(c);

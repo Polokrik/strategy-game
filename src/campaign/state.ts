@@ -86,6 +86,10 @@ export interface CampaignState {
   /** niveau de forteresse de chaque province (0 à MAX_FORT) */
   fort: Record<ProvinceId, number>;
   gold: number;
+  /** le plus grand nombre de provinces tenues par la Couronne : les époques et la date ne reculent pas */
+  reach: number;
+  /** provinces tenues au départ */
+  reach0: number;
   /** cases de renforts automatiques achetées (en plus du ratio de la carte) */
   autoSlots: number;
   missions: Mission[];
@@ -95,10 +99,27 @@ export interface CampaignState {
 /* ---------- requêtes ---------- */
 
 export const scenarioOf = (c: CampaignState): Scenario => SCENARIOS.find((s) => s.id === c.scenario)!;
+/**
+ * La date. Avec `endYear`, elle suit la conquête (de la date de départ à `endYear` quand l'objectif est rempli, plus un
+ * an tous les trois tours pour ne pas figer le temps) ; sinon elle suit simplement les tours.
+ */
 export const yearOf = (c: CampaignState): number => {
   const s = scenarioOf(c);
-  return s.startYear + c.turn * s.yearsPerTurn;
+  if (s.endYear === undefined) return s.startYear + c.turn * s.yearsPerTurn;
+  const goal = goalOf(c).length;
+  const needed = Math.max(1, s.goal === "all" ? goal - c.reach0 : goal);
+  const share = Math.min(1, Math.max(0, c.reach - c.reach0) / needed);
+  return Math.min(s.endYear, s.startYear + Math.round((s.endYear - s.startYear) * share) + Math.floor(c.turn / 3));
 };
+
+/** Les époques, par taille du royaume : chacune apporte un avantage en bataille. */
+export const ERAS = [
+  { from: 0, name: "Domaine royal", perk: "" },
+  { from: 6, name: "Royaume", perk: "Cavalerie : vos troupes avancent plus vite." },
+] as const;
+export const CAVALRY_SPEED = 1.3;
+export const eraIndex = (reach: number): number => ERAS.reduce((n, e, i) => (reach >= e.from ? i : n), 0);
+export const eraOf = (c: CampaignState): (typeof ERAS)[number] => ERAS[eraIndex(c.reach)];
 export const provincesOf = (c: CampaignState, f: FactionId): ProvinceId[] =>
   Object.keys(c.owner).filter((id) => c.owner[id] === f);
 export const goalOf = (c: CampaignState): ProvinceId[] => {

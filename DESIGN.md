@@ -209,3 +209,9 @@ La carte jointe par Paul montre des **provinces historiques** (Flandre-Artois, G
 - Journal (2 batailles, difficulté 1, auto 10, 2 cases) : victoires en 93 s et 41 s, un ordre toutes les 2,5 s, « assez facile mais agréable ». Ce rythme est plus rapide que celui des bots de calibrage (4 s).
 - L'ancien « Normal » (×1) devient « Facile » : Zen ×0,8 · Facile ×1 · Normal ×1,25 · Dur ×1,5 · Cruel ×1,8. Les sauvegardes existantes gardent leur valeur numérique, donc passent en Facile.
 - Normal ×1,25, Dur et Cruel sont des estimations : seul ×1 a été joué (n = 2). À recaler avec le prochain journal.
+
+## Époques (palier 1) et date liée à la conquête
+
+- Les campagnes historiques (Philippe Auguste, La France se fait) datent selon la conquête : de 1180 à 1223 (resp. 1768) quand l'objectif est rempli, +1 an tous les 3 tours pour que le temps ne se fige jamais. Elle ne recule pas si une province est perdue (`reach`). « Fais ton histoire », décorrélée de l'histoire réelle, garde 3 ans par tour.
+- Les époques suivent la taille maximale du royaume (`reach`). Palier 1 : « Royaume » à 6 provinces = cavalerie, les troupes du joueur avancent à ×1,3 dans les batailles de campagne (`GameState.speedMul`). Aucune mesure d'équilibre encore : à juger en jouant, ×1,3 est un choix au jugé.
+- Pas encore : « Grand royaume » (12) et « France » (20), nouvelle unité avec taux d'apparition. On attend le retour sur la cavalerie.

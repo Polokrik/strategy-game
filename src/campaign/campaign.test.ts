@@ -487,12 +487,12 @@ describe("rattrapage", () => {
 });
 
 describe("fin de tour", () => {
-  it("fait avancer l'année de 3 ans, verse le revenu", () => {
+  it("verse le revenu, et la date suit la conquête (un an tous les trois tours seulement)", () => {
     const c = quiet();
     const gold = c.gold;
     const r = passTurn(c);
     expect(c.turn).toBe(1);
-    expect(yearOf(c)).toBe(1183);
+    expect(yearOf(c)).toBe(1180);
     expect(r.income).toBe(7);
     expect(c.gold).toBe(gold + 7);
   });
@@ -587,5 +587,41 @@ describe("cases de renforts automatiques", () => {
     const old = JSON.parse(serialize(c));
     delete old.autoSlots;
     expect(deserialize(JSON.stringify(old))?.autoSlots).toBe(0);
+  });
+});
+
+describe("époques et date", () => {
+  it("la date suit la conquête dans une campagne historique, sans reculer", () => {
+    const c = quiet();
+    expect(yearOf(c)).toBe(1180);
+    c.owner["normandie"] = "crown";
+    c.owner["picardie"] = "crown";
+    c.reach = c.reach0 + 2;
+    const mid = yearOf(c);
+    expect(mid).toBeGreaterThan(1180);
+    expect(mid).toBeLessThan(1223);
+    c.owner["normandie"] = "plantagenets"; // perdre une province ne recule pas la date
+    expect(yearOf(c)).toBe(mid);
+    c.reach = c.reach0 + 5;
+    expect(yearOf(c)).toBe(1223);
+  });
+  it("« Fais ton histoire » garde le rythme des tours", () => {
+    const c = newCampaign("fais-ton-histoire", 1, 1, "bretagne");
+    c.turn = 4;
+    expect(yearOf(c)).toBe(1192);
+  });
+  it("le Royaume (6 provinces) donne la cavalerie en bataille, pas avant", () => {
+    const c = quiet();
+    const t = targets(c)[0];
+    expect(Object.values(battleLevel(c, t).build().speedMul)).toEqual([]);
+    c.reach = 6;
+    const s = battleLevel(c, t).build();
+    expect(Object.values(s.speedMul)).toContain(1.3);
+  });
+  it("annonce la nouvelle époque dans la chronique", () => {
+    const c = quiet();
+    for (const id of Object.keys(c.owner).slice(0, 6)) c.owner[id] = "crown";
+    const r = passTurn(c);
+    expect(r.lines.join(" ")).toContain("Nouvelle époque : Royaume");
   });
 });
