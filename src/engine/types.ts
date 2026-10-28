@@ -27,6 +27,8 @@ export interface GameState {
   squads: Squad[];
   time: number;
   nextSquadId: number;
+  /** multiplicateur de production par camp (1 par défaut) */
+  productionMul: Record<OwnerId, number>;
   /** null tant que la partie est en cours */
   winner: OwnerId | null;
 }

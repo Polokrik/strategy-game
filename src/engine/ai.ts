@@ -12,34 +12,50 @@ export interface AiParams {
   sendRatio: number;
   /** marge exigée sur la défense de la cible */
   margin: number;
+  /** nombre maximum d'envois par décision (un humain ne lance pas tout en même temps) */
+  maxSends: number;
+  /** multiplicateur de production de l'IA (< 1 = handicap) */
+  productionMul: number;
 }
 
 export const BALANCED: Omit<AiParams, "owner"> = {
-  interval: 1.2,
-  attackThreshold: 12,
+  interval: 2.2,
+  attackThreshold: 14,
   sendRatio: 0.6,
-  margin: 3,
+  margin: 4,
+  maxSends: 1,
+  productionMul: 0.8,
 };
 
 export function makeAi(params: AiParams): (s: GameState, dt: number) => void {
   let acc = 0;
   return (s, dt) => {
+    s.productionMul[params.owner] = params.productionMul;
     acc += dt;
     if (acc < params.interval) return;
     acc = 0;
 
+    const options: { from: number; to: number; score: number }[] = [];
     for (const from of s.bases) {
       if (from.owner !== params.owner || from.troops < params.attackThreshold) continue;
       const count = Math.floor(from.troops * params.sendRatio);
-
-      let best: { id: number; score: number } | null = null;
       for (const to of s.bases) {
-        if (to.owner === params.owner) continue;
-        if (to.troops + params.margin >= count) continue;
+        if (to.owner === params.owner || to.troops + params.margin >= count) continue;
         const score = to.troops + Math.hypot(to.x - from.x, to.y - from.y) * 0.4;
-        if (!best || score < best.score) best = { id: to.id, score };
+        options.push({ from: from.id, to: to.id, score });
       }
-      if (best) send(s, from.id, best.id, params.owner, params.sendRatio);
+    }
+    options.sort((a, b) => a.score - b.score);
+
+    const used = new Set<number>();
+    let sent = 0;
+    for (const o of options) {
+      if (sent >= params.maxSends) break;
+      if (used.has(o.from)) continue;
+      if (send(s, o.from, o.to, params.owner, params.sendRatio)) {
+        used.add(o.from);
+        sent++;
+      }
     }
   };
 }

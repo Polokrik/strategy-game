@@ -11,6 +11,7 @@ export function createState(bases: Omit<Base, "id">[]): GameState {
     squads: [],
     time: 0,
     nextSquadId: 1,
+    productionMul: {},
     winner: null,
   };
 }
@@ -66,7 +67,7 @@ export function step(s: GameState, dt: number): void {
 
   for (const b of s.bases) {
     if (b.owner === NEUTRAL || b.troops >= b.capacity) continue;
-    b.troops = Math.min(b.capacity, b.troops + b.capacity * PRODUCTION_PER_CAPACITY * dt);
+    b.troops = Math.min(b.capacity, b.troops + b.capacity * PRODUCTION_PER_CAPACITY * (s.productionMul[b.owner] ?? 1) * dt);
   }
 
   for (const q of s.squads) {
