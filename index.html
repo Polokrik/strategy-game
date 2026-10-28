@@ -21,11 +21,14 @@
     </div>
 
     <div id="dock" hidden>
-      <div class="dock-head">
-        <span class="dock-label" id="dock-label">Renforts auto</span>
+      <button id="auto-toggle" aria-pressed="false">
+        <span class="auto-ico" aria-hidden="true">»</span>
+        <span>Renforts auto</span>
+      </button>
+      <div id="auto-opts" hidden>
+        <div id="auto" role="group" aria-label="Seuil des renforts automatiques"></div>
         <span id="auto-count" aria-live="polite"></span>
       </div>
-      <div id="auto" role="group" aria-labelledby="dock-label"></div>
     </div>
 
     <div id="camp-hud" hidden>

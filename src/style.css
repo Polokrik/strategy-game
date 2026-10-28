@@ -289,31 +289,51 @@ body {
   width: min(calc(100% - 24px), 22rem);
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 8px 14px 10px;
+  gap: 8px;
+  padding: 8px;
   border: 3px solid var(--ink);
-  border-radius: 24px;
+  border-radius: 28px;
   background: var(--lav-50);
   box-shadow: 0 4px 0 rgba(43, 42, 58, 0.35);
 }
-.dock-head {
+/* grisé tant qu'il n'est pas activé, mais toujours cliquable : un toucher suffit */
+#auto-toggle {
   display: flex;
-  align-items: baseline;
-  justify-content: space-between;
-}
-.dock-label {
-  font-size: 0.85rem;
-  font-weight: 700;
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--ink-soft);
-}
-#auto-count {
-  font-family: var(--font-display);
-  font-size: 1.05rem;
-  padding: 1px 10px 0;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  min-height: 48px;
+  border: 3px solid var(--ink);
   border-radius: 999px;
   background: var(--lav-100);
+  color: var(--ink-soft);
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  cursor: pointer;
+}
+#auto-toggle[aria-pressed="true"] {
+  background: linear-gradient(var(--green-400), var(--green-600));
+  color: #fff;
+  text-shadow: 0 2px 0 rgba(0, 0, 0, 0.35);
+}
+.auto-ico {
+  font-size: 1.5rem;
+  line-height: 1;
+  padding-bottom: 3px;
+}
+#auto-opts {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#auto-count {
+  flex: none;
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+  padding: 3px 10px 1px;
+  border-radius: 999px;
+  background: var(--lav-100);
+  white-space: nowrap;
 }
 #auto-count.full {
   background: var(--gold-300);

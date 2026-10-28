@@ -21,7 +21,7 @@ import {
 } from "./campaign/campaign";
 import { CROWN, FACTIONS, HISTORY, MAP, PROVINCES, type ProvinceId, SCENARIOS } from "./campaign/france";
 import { CAMPAIGN_WORLD, drawCampaign, provinceAt } from "./campaign/render";
-import { AUTO_THRESHOLDS, autoStatus, makeAutoReinforce } from "./engine/auto";
+import { AUTO_THRESHOLDS, autoStatus, makeAutoReinforce, suggestFlags } from "./engine/auto";
 import { LEVELS, type LevelDef, WORLD_H, WORLD_W, makeLevelAis } from "./engine/level";
 import { findPath, send, step } from "./engine/sim";
 import { type Base, type GameState, PLAYER } from "./engine/types";
@@ -58,6 +58,7 @@ let tab: "chapters" | "campaign" = "chapters";
 let selected = 0; // chapitre choisi dans le menu
 let current = 0; // chapitre en cours
 let autoThreshold = 0;
+let autoOn = false; // renforts activés pour cette bataille (grisé au départ)
 let autoFlags: number[] = []; // territoires cochés pour les renforts, dans l'ordre
 let drag: { from: Base; x: number; y: number } | null = null;
 let view: View = { w: 1, h: 1, scale: 1, offX: 0, offY: 0 };
@@ -97,7 +98,7 @@ const onCampaignMap = () => mode === "campaign" || mode === "chronicle" || (mode
 function mapInsets(): { top: number; bottom: number } {
   if (mode === "menu") return { top: 74, bottom: $("menu-bottom").getBoundingClientRect().height + 20 };
   if (mode === "campaign") return { top: 62, bottom: $("camp-panel").getBoundingClientRect().height + 20 };
-  return { top: 62, bottom: $("dock").hidden ? 18 : 116 };
+  return { top: 62, bottom: $("dock").hidden ? 18 : $("dock").getBoundingClientRect().height + 24 };
 }
 
 function layout(): void {
@@ -236,12 +237,15 @@ function renderCampaignMenu(): void {
 let preview: CampaignState | null = null;
 
 function renderAutoDock(): void {
+  const toggle = $("auto-toggle");
+  toggle.setAttribute("aria-pressed", String(autoOn));
+  $("auto-opts").hidden = !autoOn;
   $("auto").replaceChildren(
-    ...AUTO_THRESHOLDS.map((t) => {
+    ...AUTO_THRESHOLDS.filter((t) => t > 0).map((t) => {
       const b = document.createElement("button");
-      b.textContent = t === 0 ? "Off" : String(t);
+      b.textContent = String(t);
       b.setAttribute("aria-pressed", String(t === autoThreshold));
-      b.setAttribute("aria-label", t === 0 ? "Renforts automatiques désactivés" : `Renforts automatiques à ${t} troupes`);
+      b.setAttribute("aria-label", `Renforts automatiques à ${t} troupes`);
       b.addEventListener("click", () => {
         autoThreshold = t;
         store(KEY_AUTO, String(t));
@@ -252,13 +256,25 @@ function renderAutoDock(): void {
   );
 }
 
+/** Active ou coupe les renforts : à l'activation, les meilleurs territoires de l'arrière sont cochés d'office. */
+function toggleAutoMode(): void {
+  autoOn = !autoOn;
+  if (autoOn) {
+    if (autoThreshold === 0) autoThreshold = 20;
+    if (state && autoFlags.length === 0) autoFlags = suggestFlags(state, PLAYER);
+  }
+  renderAutoDock();
+  layout(); // le bandeau change de hauteur
+}
+
 /** Lance une bataille : un chapitre, ou celle d'une province de la campagne. */
 function launch(def: LevelDef): void {
   currentDef = def;
   state = def.build();
   ais = makeLevelAis(def);
   autoFlags = [];
-  auto = def.auto ? makeAutoReinforce(PLAYER, () => autoThreshold, () => autoFlags) : null;
+  autoOn = false;
+  auto = def.auto ? makeAutoReinforce(PLAYER, () => (autoOn ? autoThreshold : 0), () => autoFlags) : null;
   drag = null;
   running = true;
   renderAutoDock();
@@ -435,11 +451,12 @@ canvas.addEventListener("pointerup", (e) => {
   const p = toWorld(e);
   const target = baseAt(p.x, p.y);
   if (target && target.id === drag.from.id) {
-    if (auto) toggleAuto(target.id); // un simple toucher coche ou décoche le territoire
+    if (auto && autoOn) toggleAuto(target.id); // un simple toucher coche ou décoche le territoire
   } else if (target) send(state, drag.from.id, target.id, PLAYER);
   drag = null;
 });
 canvas.addEventListener("pointercancel", () => (drag = null));
+$("auto-toggle").addEventListener("click", toggleAutoMode);
 $("play").addEventListener("click", startChapter);
 $("replay").addEventListener("click", startChapter);
 $("next").addEventListener("click", () => {
@@ -532,12 +549,12 @@ function frame(now: number): void {
   }
   const shown = mode === "result" ? null : state;
   let marks: AutoMark[] = [];
-  if (shown && running && auto) {
+  if (shown && running && auto && autoOn) {
     const st = autoStatus(shown, PLAYER, autoFlags);
-    marks = st.flagged.map((id) => ({ id, active: autoThreshold > 0 && st.active.includes(id) }));
+    marks = st.flagged.map((id) => ({ id, active: st.active.includes(id) }));
     const count = $("auto-count");
-    count.textContent = st.cap === 0 ? "dès 6 territoires" : `${st.flagged.length}/${st.cap} territoires`;
-    count.classList.toggle("full", st.cap > 0 && st.flagged.length >= st.cap);
+    count.textContent = `${st.flagged.length}/${st.cap} cases`;
+    count.classList.toggle("full", st.flagged.length >= st.cap);
   }
   drawScene(ctx, view, shown, drag?.from.id ?? null, shown && running ? previewOf(shown) : null, marks);
   requestAnimationFrame(frame);

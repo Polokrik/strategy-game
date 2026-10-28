@@ -5,18 +5,28 @@ import type { GameState, OwnerId } from "./types";
 export const AUTO_THRESHOLDS = [0, 10, 20, 30] as const;
 
 /**
- * Part des territoires du joueur qu'il peut automatiser (le plafond monte avec l'empire). Mesuré avec un joueur
- * lent (victoire sans renforts ~30 %) : 1/3 donne 92 % (aucune borne en pratique), 1/6 donne 75-83 %, 1/8 54-63 %.
+ * Part des territoires de la CARTE que le joueur peut automatiser, au moins un. Mesuré avec un joueur lent
+ * (victoire sans renforts ~30 %), sur 25 territoires : 4 cases 92-96 % au seuil 10, 3 cases 83-88 %, 2 cases
+ * 75-88 %, 1 case 46-83 % (marge ±10). Au-delà de 2 cases rien ne borne plus ; 1/10 donne 2 cases sur 25 territoires.
  */
-export const AUTO_RATIO = 1 / 6;
+export const AUTO_RATIO = 1 / 10;
 
 const AUTO_INTERVAL = 1; // secondes entre deux passages
 
-/** Nombre de territoires automatisables pour `owned` territoires. */
-export const autoCap = (owned: number, ratio: number = AUTO_RATIO): number => Math.floor(owned * ratio);
+/** Nombre de territoires automatisables sur une carte de `total` territoires : au moins un, même sur une petite carte. */
+export const autoCap = (total: number, ratio: number = AUTO_RATIO): number => Math.max(1, Math.floor(total * ratio));
 
 const onFront = (s: GameState, owner: OwnerId, id: number): boolean =>
   s.links[id].some((n) => s.bases[n].owner !== owner);
+
+/** Les meilleurs territoires de l'arrière à automatiser (les plus gros d'abord), pour remplir les cases d'un seul geste. */
+export function suggestFlags(s: GameState, owner: OwnerId, ratio: number = AUTO_RATIO): number[] {
+  return s.bases
+    .filter((b) => b.owner === owner && !onFront(s, owner, b.id))
+    .sort((a, b) => b.capacity - a.capacity || b.troops - a.troops)
+    .slice(0, autoCap(s.bases.length, ratio))
+    .map((b) => b.id);
+}
 
 export interface AutoStatus {
   /** cochés, qui nous appartiennent et dans le plafond */
@@ -37,8 +47,7 @@ export function autoStatus(
   flags: readonly number[],
   ratio: number = AUTO_RATIO,
 ): AutoStatus {
-  const owned = s.bases.filter((b) => b.owner === owner).length;
-  const cap = autoCap(owned, ratio);
+  const cap = autoCap(s.bases.length, ratio);
   const flagged = flags.filter((id) => s.bases[id]?.owner === owner).slice(0, cap);
   return { flagged, active: flagged.filter((id) => !onFront(s, owner, id)), cap };
 }

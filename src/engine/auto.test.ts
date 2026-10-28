@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { AUTO_RATIO, autoCap, autoStatus, makeAutoReinforce } from "./auto";
+import { AUTO_RATIO, autoCap, autoStatus, makeAutoReinforce, suggestFlags } from "./auto";
 
 /** un tiers : un plafond assez large pour tester la mécanique sur de petites cartes */
 const THIRD = 1 / 3;
@@ -19,18 +19,20 @@ const chain = (n: number, troops = 40) =>
   );
 
 describe("plafond", () => {
-  it("un tiers des territoires, arrondi vers le bas", () => {
-    expect(AUTO_RATIO).toBeCloseTo(1 / 6);
-    expect([0, 5, 6, 11, 12, 18, 25].map((n) => autoCap(n))).toEqual([0, 0, 1, 1, 2, 3, 4]);
-    expect([0, 2, 3, 5, 6, 9, 14].map((n) => autoCap(n, THIRD))).toEqual([0, 0, 1, 1, 2, 3, 4]);
+  it("un dixième des territoires de la carte, au moins un", () => {
+    expect(AUTO_RATIO).toBeCloseTo(1 / 10);
+    // petites cartes : toujours 1 ; 25 territoires : 2 ; une grande carte monde : beaucoup
+    expect([3, 7, 9, 16, 19].map((n) => autoCap(n))).toEqual([1, 1, 1, 1, 1]);
+    expect([20, 25, 31, 200].map((n) => autoCap(n))).toEqual([2, 2, 3, 20]);
+    expect([2, 5, 6, 9, 14].map((n) => autoCap(n, THIRD))).toEqual([1, 1, 2, 3, 4]);
   });
 
   it("ne retient que les territoires cochés qui nous appartiennent, dans le plafond", () => {
-    const s = chain(7); // plafond 2
+    const s = chain(7); // 8 territoires, plafond 2 à un tiers
     const st = autoStatus(s, PLAYER, [0, 1, 2], THIRD);
     expect(st.cap).toBe(2);
     expect(st.flagged).toEqual([0, 1]);
-    s.bases[0].owner = ENEMY; // un coché est perdu : 6 territoires, plafond 2 toujours
+    s.bases[0].owner = ENEMY; // un coché est perdu
     expect(autoStatus(s, PLAYER, [0, 1, 2], THIRD).flagged).toEqual([1, 2]);
   });
 
@@ -39,6 +41,21 @@ describe("plafond", () => {
     const st = autoStatus(s, PLAYER, [0, 5], THIRD);
     expect(st.flagged).toEqual([0, 5]);
     expect(st.active).toEqual([0]);
+  });
+
+  it("propose les plus gros territoires de l'arrière, jamais ceux du front", () => {
+    const s = createState(
+      [
+        { x: 0, y: 0, owner: PLAYER, troops: 10, capacity: 30 },
+        { x: 20, y: 0, owner: PLAYER, troops: 10, capacity: 60 },
+        { x: 40, y: 0, owner: PLAYER, troops: 10, capacity: 45 },
+        { x: 60, y: 0, owner: PLAYER, troops: 10, capacity: 60 }, // front
+        { x: 80, y: 0, owner: ENEMY, troops: 30, capacity: 60 },
+      ],
+      [[0, 1], [1, 2], [2, 3], [3, 4]],
+    );
+    expect(suggestFlags(s, PLAYER, 0.4)).toEqual([1, 2]);
+    expect(suggestFlags(s, PLAYER)).toEqual([1]); // 5 territoires à 1/10 : un seul
   });
 });
 
