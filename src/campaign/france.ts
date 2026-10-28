@@ -140,6 +140,10 @@ export const START_OWNERS: Record<ProvinceId, FactionId> = {
 export interface Scenario {
   id: string;
   title: string;
+  /** libellé court pour le sélecteur */
+  short: string;
+  /** le joueur choisit sa province de départ ; la Couronne d'origine devient indépendante */
+  custom?: boolean;
   blurb: string;
   /** provinces à détenir pour gagner, ou toutes */
   goal: ProvinceId[] | "all";
@@ -151,6 +155,7 @@ export const SCENARIOS: Scenario[] = [
   {
     id: "philippe-auguste",
     title: "Les conquêtes de Philippe Auguste",
+    short: "Philippe Auguste",
     blurb: "1180. Le domaine royal tient dans trois provinces ; l'empire Plantagenêt en tient neuf. Prends la Normandie, l'Anjou-Touraine, le Maine, le Poitou et la Picardie.",
     goal: ["normandie", "anjou-touraine", "maine", "poitou", "picardie"],
     startYear: 1180,
@@ -159,7 +164,18 @@ export const SCENARIOS: Scenario[] = [
   {
     id: "la-france-se-fait",
     title: "La France se fait",
+    short: "La France se fait",
     blurb: "1180. Reconstruis le royaume province après province, jusqu'à la Corse. Longue campagne : plusieurs sessions.",
+    goal: "all",
+    startYear: 1180,
+    yearsPerTurn: 3,
+  },
+  {
+    id: "fais-ton-histoire",
+    title: "Fais ton histoire",
+    short: "Fais ton histoire",
+    custom: true,
+    blurb: "Choisis la province où tout commence, seul contre tous les autres camps, et conquiers le reste de la France.",
     goal: "all",
     startYear: 1180,
     yearsPerTurn: 3,

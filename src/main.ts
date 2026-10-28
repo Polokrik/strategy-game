@@ -36,7 +36,7 @@ import {
   winChance,
   yearOf,
 } from "./campaign/campaign";
-import { CROWN, type FactionId, FACTIONS, HISTORY, MAP, PROVINCES, type ProvinceId, SCENARIOS, agree, tierOf } from "./campaign/france";
+import { CROWN, type FactionId, FACTIONS, HISTORY, MAP, PROVINCES, type ProvinceId, SCENARIOS, START_OWNERS, agree, tierOf } from "./campaign/france";
 import { CAMPAIGN_WORLD, drawCampaign, provinceAt } from "./campaign/render";
 import { AUTO_THRESHOLDS, autoStatus, makeAutoReinforce, suggestFlags } from "./engine/auto";
 import { LEVELS, type LevelDef, WORLD_H, WORLD_W, makeLevelAis } from "./engine/level";
@@ -65,7 +65,7 @@ const $ = (id: string) => document.getElementById(id)!;
 const canvas = $("game") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 
-type Mode = "menu" | "game" | "result" | "campaign" | "chronicle";
+type Mode = "menu" | "game" | "result" | "campaign" | "chronicle" | "pick";
 
 let state: GameState | null = null;
 let currentDef: LevelDef = LEVELS[0];
@@ -93,6 +93,9 @@ let battle: { kind: "attack" | "defend"; target: ProvinceId; threat?: Threat } |
 let pending: { report: TurnReport; before: Record<ProvinceId, FactionId> } | null = null;
 /** L'animation de fin de tour : les attaques défilent une à une sur la carte. */
 let phase: { report: TurnReport; i: number; start: number; view: Record<ProvinceId, FactionId> } | null = null;
+/** « Fais ton histoire » : l'écran où l'on choisit sa province de départ. */
+let picking: { scenario: string; start: ProvinceId | null } | null = null;
+let pickBoard: CampaignState | null = null;
 let scenarioPick = 0;
 let difficulty = 1;
 
@@ -117,7 +120,7 @@ const fmtTime = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60
 
 /* ---------- mise en page du canvas ---------- */
 
-const onCampaignMap = () => mode === "campaign" || mode === "chronicle" || (mode === "menu" && tab === "campaign");
+const onCampaignMap = () => mode === "campaign" || mode === "chronicle" || mode === "pick" || (mode === "menu" && tab === "campaign");
 
 /** Zone du canvas laissée à la carte, en pixels CSS, selon ce que l'interface recouvre. */
 function mapInsets(): { top: number; bottom: number } {
@@ -126,6 +129,7 @@ function mapInsets(): { top: number; bottom: number } {
     const bottom = phase ? 70 : $("camp-panel").getBoundingClientRect().height + 20;
     return { top: 112, bottom };
   }
+  if (mode === "pick") return { top: 74, bottom: $("camp-panel").getBoundingClientRect().height + 20 };
   return { top: 62, bottom: $("dock").hidden ? 18 : $("dock").getBoundingClientRect().height + 24 };
 }
 
@@ -174,7 +178,8 @@ function setMode(next: Mode): void {
   $("overlay").hidden = next !== "result";
   $("chronicle").hidden = next !== "chronicle";
   $("camp-hud").hidden = next !== "campaign";
-  $("camp-panel").hidden = next !== "campaign" || phase !== null;
+  $("pick-hud").hidden = next !== "pick";
+  $("camp-panel").hidden = !(next === "pick" || (next === "campaign" && phase === null));
   $("camp-banner").hidden = next !== "campaign" || phase === null;
   $("missions").hidden = true;
   $("dock").hidden = !(next === "game" && currentDef.auto);
@@ -240,7 +245,7 @@ function segmented(host: HTMLElement, items: string[], pressed: number, onPick: 
 
 function renderCampaignMenu(): void {
   const sc = SCENARIOS[scenarioPick];
-  segmented($("scenarios"), SCENARIOS.map((s) => s.title), scenarioPick, (i) => {
+  segmented($("scenarios"), SCENARIOS.map((s) => s.short), scenarioPick, (i) => {
     scenarioPick = i;
     renderMenu();
     layout();
@@ -264,7 +269,7 @@ function renderCampaignMenu(): void {
   $("c-eyebrow").textContent = saved ? `Partie en cours · ${scenarioOf(saved).title}` : "Histoire de France";
   // la carte d'aperçu : la partie en cours, sinon le départ du scénario choisi
   state = null;
-  preview = saved ?? newCampaign(sc.id, 1);
+  preview = saved ?? newCampaign(sc.custom ? "la-france-se-fait" : sc.id, 1);
 }
 
 function renderAutoDock(): void {
@@ -447,6 +452,7 @@ function renderCampaign(): void {
   const id = campSelected;
   chips.replaceChildren();
   fortBtn.hidden = true;
+  $("cp-pass").hidden = false;
   main.textContent = "Attaquer";
   main.disabled = true;
   if (!id) {
@@ -512,6 +518,53 @@ function renderCampaign(): void {
   }
 }
 
+const SIZE_LABELS = ["Petite province", "Province moyenne", "Grande province"] as const;
+
+function startPicking(): void {
+  picking = { scenario: SCENARIOS[scenarioPick].id, start: null };
+  pickBoard = newCampaign("la-france-se-fait", 1);
+  setMode("pick");
+  renderPick();
+  layout();
+}
+
+/** Fiche de la province de départ envisagée. */
+function renderPick(): void {
+  const id = picking?.start ?? null;
+  const main = $("cp-main") as HTMLButtonElement;
+  $("cp-fort").hidden = true;
+  $("cp-pass").hidden = true;
+  main.textContent = "Commencer ici";
+  main.disabled = id === null;
+  const chips = $("cp-chips");
+  chips.replaceChildren();
+  if (!id) {
+    $("cp-dot").style.background = FACTION[CROWN].fill;
+    $("cp-faction").textContent = "Fais ton histoire";
+    $("cp-name").textContent = "Choisis ta province";
+    $("cp-note").textContent = "Touche la province où tout commence. Tous les autres camps seront contre toi, et la Couronne d'origine devient indépendante.";
+    return;
+  }
+  const owner = START_OWNERS[id];
+  const h = HISTORY[id];
+  $("cp-dot").style.background = (FACTION[owner] ?? FACTION.neutral).fill;
+  $("cp-faction").textContent = `${FACTIONS[owner].name} en 1180`;
+  $("cp-name").textContent = PROVINCES[id].name;
+  chips.append(
+    chip(SIZE_LABELS[tierOf(id) - 1]),
+    chip(`${PROVINCES[id].neighbors.length} voisines`),
+    chip(`Revenu +${INCOME[tierOf(id)]} or par tour`),
+  );
+  $("cp-note").textContent = h ? `${h.note} (rattachée en ${h.joined}.)` : "";
+}
+
+function confirmStart(): void {
+  if (!picking?.start) return;
+  const { scenario, start } = picking;
+  picking = null;
+  openCampaign(newCampaign(scenario, undefined, difficulty, start));
+}
+
 function selectProvince(id: ProvinceId | null): void {
   campSelected = id;
   renderCampaign();
@@ -519,6 +572,7 @@ function selectProvince(id: ProvinceId | null): void {
 }
 
 function attackOrDefend(): void {
+  if (mode === "pick") return confirmStart();
   if (!camp || !campSelected || camp.status !== "playing") return;
   const id = campSelected;
   const threat = threatOn(camp, id);
@@ -668,6 +722,14 @@ function toggleAuto(id: number): void {
 }
 
 canvas.addEventListener("pointerdown", (e) => {
+  if (mode === "pick" && picking) {
+    const p = toWorld(e);
+    const margin = (CAMPAIGN_WORLD.w - MAP.width) / 2;
+    picking.start = provinceAt(p.x - margin, p.y - margin);
+    renderPick();
+    layout();
+    return;
+  }
   if (mode === "campaign" && camp) {
     if (phase) return skipPhase();
     const p = toWorld(e);
@@ -723,8 +785,10 @@ $("tab-campaign").addEventListener("click", () => {
 $("c-continue").addEventListener("click", () => camp && camp.status === "playing" && showCampaign());
 $("c-new").addEventListener("click", () => {
   if (camp?.status === "playing" && !window.confirm("Une campagne est en cours. La remplacer par une nouvelle partie ?")) return;
+  if (SCENARIOS[scenarioPick].custom) return startPicking();
   openCampaign(newCampaign(SCENARIOS[scenarioPick].id, undefined, difficulty));
 });
+$("pick-back").addEventListener("click", showMenu);
 $("camp-back").addEventListener("click", showMenu);
 $("cp-main").addEventListener("click", attackOrDefend);
 $("cp-fort").addEventListener("click", fortifySelected);
@@ -799,13 +863,13 @@ function frame(now: number): void {
   if (!running || paused) acc = 0;
 
   if (onCampaignMap()) {
-    const c = mode === "menu" ? preview : camp;
+    const c = mode === "menu" ? preview : mode === "pick" ? pickBoard : camp;
     if (c) {
       const live = mode === "campaign" && !phase;
       const anim = mode === "campaign" ? stepPhase(now) : null;
       drawCampaign(ctx, view, c, {
         ownerView: phase?.view,
-        selected: live ? campSelected : null,
+        selected: mode === "pick" ? (picking?.start ?? null) : live ? campSelected : null,
         attackable: live ? targets(c) : [],
         goal: goalOf(c),
         threats: live ? c.threats : [],

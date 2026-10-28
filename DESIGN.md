@@ -186,3 +186,9 @@ La carte jointe par Paul montre des **provinces historiques** (Flandre-Artois, G
 - **Pause avec ordres** : elle supprimerait le « précipice de compétence » mesuré plus haut (un joueur lent jouerait comme un rapide), mais change la nature du jeu ; à trancher avant le mode monde.
 - **L'or s'accumule** : les bots de test finissent avec 200 à 900 or non dépensé. Les coûts et revenus sont à régler quand on aura vu jouer Paul.
 - **La population ne pèse toujours pas** dans les batailles.
+
+## Mode « Fais ton histoire » (campagne)
+
+- Même règles que « La France se fait », mais le joueur choisit sa province de départ (écran de choix : toucher une province, « Commencer ici »). Toutes les autres provinces de la Couronne passent en neutres ; objectif : tout conquérir.
+- Mesure (bot 4 s, 30 tours, 26 départs) : aucun départ n'est éliminé, et le point de départ change peu la croissance. Le mode est donc jouable partout ; l'intérêt est narratif plus que stratégique.
+- Défaut cosmétique connu : sur l'écran de choix, chaque province porte une étoile d'objectif (`goal: "all"`).

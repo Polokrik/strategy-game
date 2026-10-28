@@ -48,12 +48,22 @@ export function newCampaign(
   scenarioId: string,
   seed = Math.floor(Math.random() * 2 ** 31),
   difficulty = 1,
+  /** scénario « Fais ton histoire » : la province où commence la Couronne */
+  start?: ProvinceId,
 ): CampaignState {
-  if (!SCENARIOS.some((s) => s.id === scenarioId)) throw new Error(`scénario inconnu : ${scenarioId}`);
+  const sc = SCENARIOS.find((s) => s.id === scenarioId);
+  if (!sc) throw new Error(`scénario inconnu : ${scenarioId}`);
+  const owner = { ...START_OWNERS };
+  if (sc.custom) {
+    if (!start || !PROVINCES[start]) throw new Error("ce scénario demande une province de départ");
+    // la Couronne d'origine devient indépendante : le joueur commence seul, avec la province choisie
+    for (const id of Object.keys(owner)) if (owner[id] === CROWN) owner[id] = NEUTRAL_FACTION;
+    owner[start] = CROWN;
+  }
   const c: CampaignState = {
     scenario: scenarioId,
     turn: 0,
-    owner: { ...START_OWNERS },
+    owner,
     seed,
     difficulty,
     status: "playing",

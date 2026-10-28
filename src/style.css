@@ -806,3 +806,19 @@ body {
   background: var(--gold-300);
   font-family: var(--font-display);
 }
+
+/* ---------- « Fais ton histoire » : choix de la province de départ ---------- */
+
+#pick-hud {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  left: 12px;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+#scenarios button {
+  font-size: 0.85rem;
+  padding: 2px 4px;
+}

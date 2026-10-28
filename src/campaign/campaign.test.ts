@@ -110,6 +110,41 @@ describe("départ de campagne", () => {
   });
 });
 
+describe("Fais ton histoire", () => {
+  it("demande une province de départ valide", () => {
+    expect(() => newCampaign("fais-ton-histoire", 1)).toThrow();
+    expect(() => newCampaign("fais-ton-histoire", 1, 1, "atlantide")).toThrow();
+  });
+
+  it("le joueur commence seul dans la province choisie ; la Couronne d'origine devient indépendante", () => {
+    const c = newCampaign("fais-ton-histoire", 1, 1, "bretagne");
+    expect(provincesOf(c, CROWN)).toEqual(["bretagne"]);
+    for (const id of ["ile-de-france", "orleanais", "berry"]) expect(c.owner[id]).toBe("neutral");
+    expect(c.owner.normandie).toBe("plantagenets"); // les autres camps restent en place
+    expect(c.status).toBe("playing");
+    expect(targets(c).sort()).toEqual([...PROVINCES.bretagne.neighbors].sort());
+  });
+
+  it("choisir une province de la Couronne d'origine ne laisse pas un camp sans territoire", () => {
+    const c = newCampaign("fais-ton-histoire", 1, 1, "berry");
+    expect(provincesOf(c, CROWN)).toEqual(["berry"]);
+    expect(provincesOf(c, "neutral")).toContain("ile-de-france");
+  });
+
+  it("un camp dont l'unique province est choisie disparaît sans bloquer la campagne", () => {
+    const c = newCampaign("fais-ton-histoire", 3, 1, "champagne");
+    expect(provincesOf(c, "champagne")).toHaveLength(0);
+    for (let i = 0; i < 6 && c.status === "playing"; i++) passTurn(c);
+    expect(Object.keys(c.owner)).toHaveLength(26);
+  });
+
+  it("l'objectif est la France entière et la sauvegarde se relit", () => {
+    const c = newCampaign("fais-ton-histoire", 1, 1, "corse");
+    expect(goalReached(c)).toBe(false);
+    expect(deserialize(serialize(c))).toEqual(c);
+  });
+});
+
 describe("attaques du joueur", () => {
   it("on n'attaque que les provinces voisines des siennes", () => {
     const c = fresh();
