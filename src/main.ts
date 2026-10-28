@@ -55,6 +55,7 @@ const TOUCH_RANGE = 19;
 const KEY_DONE = "conquete.done";
 const KEY_AUTO = "conquete.auto";
 const KEY_CAMPAIGN = "conquete.campagne"; // ancienne sauvegarde unique, reprise dans son scénario
+const KEY_JOURNAL = "conquete.journal";
 const keyOf = (scenario: string): string => `${KEY_CAMPAIGN}.${scenario}`;
 const KEY_DIFFICULTY = "conquete.difficulte";
 const DIFFICULTIES: [string, number][] = [
@@ -104,6 +105,8 @@ let picking: { scenario: string; start: ProvinceId | null } | null = null;
 let pickBoard: CampaignState | null = null;
 let scenarioPick = 0;
 let difficulty = 1;
+/** Ordres donnés pendant la bataille en cours (instants en secondes de jeu) : sert à régler la difficulté sur le vrai rythme du joueur. */
+let orderTimes: number[] = [];
 
 function store(key: string, value?: string): string | null {
   try {
@@ -328,6 +331,7 @@ function launch(def: LevelDef): void {
   ais = makeLevelAis(def);
   autoFlags = [];
   autoOn = false;
+  orderTimes = [];
   auto = def.auto ? makeAutoReinforce(PLAYER, () => (autoOn ? autoThreshold : 0), () => autoFlags, undefined, def.autoBonus) : null;
   drag = null;
   running = true;
@@ -401,6 +405,7 @@ function showResult(): void {
 /** Applique le résultat d'une bataille de campagne. `showScreen` : passer par l'écran de résultat, sinon retour direct à la carte. */
 function finishCampaignBattle(won: boolean, seconds: number, showScreen: boolean): void {
   if (!battle || !camp) return;
+  logBattle(won, seconds);
   const before = { ...camp.owner };
   const report =
     battle.kind === "attack" ? playAttack(camp, battle.target, won, seconds) : playDefense(camp, battle.threat!, won, seconds);
@@ -408,6 +413,32 @@ function finishCampaignBattle(won: boolean, seconds: number, showScreen: boolean
   pending = { report, before };
   running = false;
   if (!showScreen) afterBattle();
+}
+
+/** Journal de jeu : une ligne par bataille de campagne, gardé en local, à copier pour caler l'équilibrage. */
+function logBattle(won: boolean, seconds: number): void {
+  if (!camp || !battle) return;
+  const gaps = orderTimes.slice(1).map((t, i) => t - orderTimes[i]);
+  const entry = {
+    scenario: camp.scenario,
+    difficulty: camp.difficulty ?? 1,
+    turn: camp.turn + 1,
+    kind: battle.kind,
+    target: battle.target,
+    won,
+    seconds: Math.round(seconds),
+    orders: orderTimes.length,
+    gap: gaps.length ? Math.round((gaps.reduce((a, b) => a + b, 0) / gaps.length) * 10) / 10 : null,
+    auto: autoOn ? autoThreshold : 0,
+    cases: camp.autoSlots,
+    gold: camp.gold,
+  };
+  try {
+    const all = JSON.parse(store(KEY_JOURNAL) ?? "[]") as unknown[];
+    store(KEY_JOURNAL, JSON.stringify([...all, entry].slice(-200)));
+  } catch {
+    /* journal facultatif */
+  }
 }
 
 /** De l'écran de résultat à la carte, où les attaques du tour défilent. */
@@ -786,7 +817,10 @@ canvas.addEventListener("pointerup", (e) => {
   const target = baseAt(p.x, p.y);
   if (target && target.id === drag.from.id) {
     if (auto && autoOn) toggleAuto(target.id); // un simple toucher coche ou décoche le territoire
-  } else if (target) send(state, drag.from.id, target.id, PLAYER);
+  } else if (target) {
+    send(state, drag.from.id, target.id, PLAYER);
+    orderTimes.push(state.time);
+  }
   drag = null;
 });
 canvas.addEventListener("pointercancel", () => (drag = null));
@@ -819,6 +853,16 @@ $("c-continue").addEventListener("click", () => {
   if (saved?.status !== "playing") return;
   camp = saved;
   showCampaign();
+});
+$("c-journal").addEventListener("click", async () => {
+  const text = store(KEY_JOURNAL) ?? "[]";
+  const btn = $("c-journal");
+  try {
+    await navigator.clipboard.writeText(text);
+    btn.textContent = "Journal copié ✓";
+  } catch {
+    window.prompt("Copie ce journal de jeu :", text);
+  }
 });
 $("c-new").addEventListener("click", () => {
   if (saves[SCENARIOS[scenarioPick].id]?.status === "playing" && !window.confirm("Cette campagne est en cours. La remplacer par une nouvelle partie ?")) return;

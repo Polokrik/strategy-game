@@ -833,3 +833,11 @@ body {
   font-size: 0.88rem;
   padding: 0 2px 2px;
 }
+.link {
+  border: 0;
+  background: transparent;
+  color: var(--ink-soft);
+  font: 700 0.85rem var(--font-body);
+  text-decoration: underline;
+  cursor: pointer;
+}
