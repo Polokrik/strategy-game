@@ -192,3 +192,9 @@ La carte jointe par Paul montre des **provinces historiques** (Flandre-Artois, G
 - Même règles que « La France se fait », mais le joueur choisit sa province de départ (écran de choix : toucher une province, « Commencer ici »). Toutes les autres provinces de la Couronne passent en neutres ; objectif : tout conquérir.
 - Mesure (bot 4 s, 30 tours, 26 départs) : aucun départ n'est éliminé, et le point de départ change peu la croissance. Le mode est donc jouable partout ; l'intérêt est narratif plus que stratégique.
 - Défaut cosmétique connu : sur l'écran de choix, chaque province porte une étoile d'objectif (`goal: "all"`).
+
+## Renforts auto : ratio 1/4 et cases achetées (retour de jeu)
+
+- Le ratio 1/10 était trop faible en jeu (12 territoires : 1 case). Passé à 1/4 (12 → 3). Les mesures ayant mené à 1/10 sont obsolètes : à re-mesurer, l'auto est maintenant plus fort.
+- L'or achète des cases en plus (30, 50, 80 or ; 3 max), valables dans toutes les batailles de la campagne, pas de persistance entre campagnes.
+- Chaque territoire à soi affiche une pastille « + » quand l'auto est activé : on la touche (le territoire) pour le cocher.

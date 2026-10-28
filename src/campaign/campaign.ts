@@ -29,6 +29,8 @@ import {
   START_GOLD,
   type Threat,
   type TurnReport,
+  autoSlotCost,
+  canBuyAutoSlot,
   canFortify,
   draw,
   fortCost,
@@ -70,6 +72,7 @@ export function newCampaign(
     log: [],
     threats: [],
     fort: {},
+    autoSlots: 0,
     gold: START_GOLD,
     missions: [],
     nextMissionId: 1,
@@ -130,6 +133,7 @@ export function battleLevel(c: CampaignState, target: ProvinceId): LevelDef {
     notion: `${foe.name} ${agree(foe.name, "défend", "défendent")} ${p.name}. ${HISTORY[target]?.note ?? ""}`.trim(),
     ais: [{ owner: FOE.owner, personality: foe.personality, handicap: foe.handicap * pressure(c) * fortMul(c, target) }],
     auto: true,
+    autoBonus: c.autoSlots,
     build: () => battleState(tierOf(target), attackerTroops(c, CROWN), defenseOf(c, target), seed),
   };
 }
@@ -143,6 +147,7 @@ export function defenseLevel(c: CampaignState, t: Threat): LevelDef {
     notion: `${atk.name} ${agree(atk.name, "attaque", "attaquent")} ${PROVINCES[t.target].name} depuis ${PROVINCES[t.from].name}. Tiens bon !`,
     ais: [{ owner: FOE.owner, personality: atk.personality, handicap: atk.handicap * pressure(c) }],
     auto: true,
+    autoBonus: c.autoSlots,
     build: () => {
       const s = battleState(tierOf(t.target), defenseOf(c, t.target), attackerTroops(c, t.attacker), seed);
       s.productionMul[START.owner] = fortMul(c, t.target); // le joueur défend derrière ses murs
@@ -319,6 +324,15 @@ export function fortify(c: CampaignState, id: ProvinceId): string | null {
   return say(c, `${PROVINCES[id].name} : forteresse de niveau ${c.fort[id]} (+${FORT_TROOPS} troupes en défense).`);
 }
 
+/** Dépense de l'or pour une case de renforts automatiques de plus dans toutes les batailles de la campagne. */
+export function buyAutoSlot(c: CampaignState): string | null {
+  const cost = autoSlotCost(c);
+  if (cost === null || !canBuyAutoSlot(c)) return null;
+  c.gold -= cost;
+  c.autoSlots++;
+  return say(c, `Renforts automatiques : ${c.autoSlots} case${c.autoSlots > 1 ? "s" : ""} de plus dans chaque bataille.`);
+}
+
 interface Play {
   kind: "attack" | "defend";
   target: ProvinceId;
@@ -442,6 +456,7 @@ export function deserialize(raw: string | null): CampaignState | null {
     c.threats ??= [];
     c.fort ??= {};
     c.gold ??= 0;
+    c.autoSlots ??= 0;
     c.missions ??= [];
     c.nextMissionId ??= 1;
     if (c.status === "playing" && c.missions.length === 0) fillMissions(c);

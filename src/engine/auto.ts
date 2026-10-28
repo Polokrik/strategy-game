@@ -7,24 +7,26 @@ export const AUTO_THRESHOLDS = [0, 10, 20, 30] as const;
 /**
  * Part des territoires de la CARTE que le joueur peut automatiser, au moins un. Mesuré avec un joueur lent
  * (victoire sans renforts ~30 %), sur 25 territoires : 4 cases 92-96 % au seuil 10, 3 cases 83-88 %, 2 cases
- * 75-88 %, 1 case 46-83 % (marge ±10). Au-delà de 2 cases rien ne borne plus ; 1/10 donne 2 cases sur 25 territoires.
+ * 75-88 %, 1 case 46-83 % (marge ±10). Ces mesures ont conduit à 1/10, que le test en jeu a jugé trop faible
+ * (12 territoires : 1 case). Retour de jeu : au moins 3 cases sur 12, donc 1/4 ; l'or achète des cases en plus.
  */
-export const AUTO_RATIO = 1 / 10;
+export const AUTO_RATIO = 1 / 4;
 
 const AUTO_INTERVAL = 1; // secondes entre deux passages
 
 /** Nombre de territoires automatisables sur une carte de `total` territoires : au moins un, même sur une petite carte. */
-export const autoCap = (total: number, ratio: number = AUTO_RATIO): number => Math.max(1, Math.floor(total * ratio));
+export const autoCap = (total: number, ratio: number = AUTO_RATIO, bonus = 0): number =>
+  Math.max(1, Math.floor(total * ratio)) + bonus;
 
 const onFront = (s: GameState, owner: OwnerId, id: number): boolean =>
   s.links[id].some((n) => s.bases[n].owner !== owner);
 
 /** Les meilleurs territoires de l'arrière à automatiser (les plus gros d'abord), pour remplir les cases d'un seul geste. */
-export function suggestFlags(s: GameState, owner: OwnerId, ratio: number = AUTO_RATIO): number[] {
+export function suggestFlags(s: GameState, owner: OwnerId, ratio: number = AUTO_RATIO, bonus = 0): number[] {
   return s.bases
     .filter((b) => b.owner === owner && !onFront(s, owner, b.id))
     .sort((a, b) => b.capacity - a.capacity || b.troops - a.troops)
-    .slice(0, autoCap(s.bases.length, ratio))
+    .slice(0, autoCap(s.bases.length, ratio, bonus))
     .map((b) => b.id);
 }
 
@@ -46,8 +48,9 @@ export function autoStatus(
   owner: OwnerId,
   flags: readonly number[],
   ratio: number = AUTO_RATIO,
+  bonus = 0,
 ): AutoStatus {
-  const cap = autoCap(s.bases.length, ratio);
+  const cap = autoCap(s.bases.length, ratio, bonus);
   const flagged = flags.filter((id) => s.bases[id]?.owner === owner).slice(0, cap);
   return { flagged, active: flagged.filter((id) => !onFront(s, owner, id)), cap };
 }
@@ -66,6 +69,7 @@ export function makeAutoReinforce(
   getThreshold: () => number,
   getFlags: () => readonly number[],
   ratio: number = AUTO_RATIO,
+  bonus = 0,
 ): (s: GameState, dt: number) => void {
   let acc = 0;
   return (s, dt) => {
@@ -78,7 +82,7 @@ export function makeAutoReinforce(
     const fronts = s.bases.filter((b) => b.owner === owner && onFront(s, owner, b.id));
     if (fronts.length === 0) return;
 
-    for (const id of autoStatus(s, owner, getFlags(), ratio).active) {
+    for (const id of autoStatus(s, owner, getFlags(), ratio, bonus).active) {
       const from = s.bases[id];
       if (from.troops < threshold) continue;
       let best: { id: number; length: number } | null = null;

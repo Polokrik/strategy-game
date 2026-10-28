@@ -232,16 +232,38 @@ function drawMarker(ctx: CanvasRenderingContext2D, b: Base): void {
 /** Territoire coché pour les renforts automatiques. */
 export interface AutoMark {
   id: number;
+  /** vrai : le territoire est coché ; faux : pastille vide à toucher pour le cocher */
+  flagged: boolean;
   /** vrai : il envoie ses renforts (vert) ; faux : en attente, au front ou seuil sur Off (gris) */
   active: boolean;
 }
 
 /** Pastille à chevrons : ce territoire envoie ses renforts tout seul (vert) ou est en attente (gris). */
-function drawAutoBadge(ctx: CanvasRenderingContext2D, b: Base, active: boolean): void {
-  const x = b.x + 6.6;
-  const y = b.y - 6.6;
+function drawAutoBadge(ctx: CanvasRenderingContext2D, b: Base, flagged: boolean, active: boolean): void {
+  const x = b.x + 7.2;
+  const y = b.y - 7.2;
+  if (!flagged) {
+    // pastille vide : un bouton « + » à toucher pour automatiser ce territoire
+    ctx.beginPath();
+    ctx.arc(x, y, 3.6, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
+    ctx.fill();
+    ctx.setLineDash([1.2, 1]);
+    ctx.strokeStyle = INK;
+    ctx.lineWidth = 0.6;
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x - 1.5, y);
+    ctx.lineTo(x + 1.5, y);
+    ctx.moveTo(x, y - 1.5);
+    ctx.lineTo(x, y + 1.5);
+    ctx.stroke();
+    return;
+  }
   ctx.beginPath();
-  ctx.arc(x, y, 3, 0, Math.PI * 2);
+  ctx.arc(x, y, 3.6, 0, Math.PI * 2);
   ctx.fillStyle = active ? "#3fb248" : "#9aa0b4";
   ctx.fill();
   ctx.strokeStyle = INK;
@@ -386,7 +408,7 @@ export function drawScene(
   drawSeaLinks(ctx, s);
   if (preview) drawPreview(ctx, preview);
   for (const b of s.bases) drawMarker(ctx, b);
-  for (const m of autoMarks) drawAutoBadge(ctx, s.bases[m.id], m.active);
+  for (const m of autoMarks) drawAutoBadge(ctx, s.bases[m.id], m.flagged, m.active);
   drawSquads(ctx, s);
   drawFights(ctx, s);
   ctx.restore();

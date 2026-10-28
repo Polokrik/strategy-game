@@ -12,6 +12,8 @@ export interface LevelDef {
   ais: { owner: OwnerId; personality: Personality; handicap?: number }[];
   /** propose les renforts automatiques (introduits par le chapitre « Renforts ») */
   auto?: boolean;
+  /** cases d'automatisation achetées en plus du ratio (campagne) */
+  autoBonus?: number;
   /** carte par défaut ; une autre graine donne une autre carte du même style (utile aux tests) */
   build: (seed?: number) => GameState;
 }

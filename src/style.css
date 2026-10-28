@@ -599,7 +599,8 @@ body {
 }
 .cp-actions {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 .cp-actions .btn {
   flex: 1;
@@ -699,7 +700,7 @@ body {
 .cp-actions .btn {
   font-size: 1.05rem;
   padding: 9px 4px 7px;
-  min-width: 0;
+  min-width: 30%;
 }
 .cp-actions .btn small {
   display: block;

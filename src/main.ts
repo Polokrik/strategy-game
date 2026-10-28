@@ -12,7 +12,10 @@ import {
   type TurnEvent,
   type TurnReport,
   attackerTroops,
+  autoSlotCost,
   battleLevel,
+  buyAutoSlot,
+  canBuyAutoSlot,
   canAttack,
   canFortify,
   dangerOf,
@@ -296,7 +299,7 @@ function toggleAutoMode(): void {
   autoOn = !autoOn;
   if (autoOn) {
     if (autoThreshold === 0) autoThreshold = 20;
-    if (state && autoFlags.length === 0) autoFlags = suggestFlags(state, PLAYER);
+    if (state && autoFlags.length === 0) autoFlags = suggestFlags(state, PLAYER, undefined, currentDef?.autoBonus);
   }
   renderAutoDock();
   layout(); // le bandeau change de hauteur
@@ -309,7 +312,7 @@ function launch(def: LevelDef): void {
   ais = makeLevelAis(def);
   autoFlags = [];
   autoOn = false;
-  auto = def.auto ? makeAutoReinforce(PLAYER, () => (autoOn ? autoThreshold : 0), () => autoFlags) : null;
+  auto = def.auto ? makeAutoReinforce(PLAYER, () => (autoOn ? autoThreshold : 0), () => autoFlags, undefined, def.autoBonus) : null;
   drag = null;
   running = true;
   renderAutoDock();
@@ -453,6 +456,11 @@ function renderCampaign(): void {
   chips.replaceChildren();
   fortBtn.hidden = true;
   $("cp-pass").hidden = false;
+  const autoBtn = $("cp-auto") as HTMLButtonElement;
+  const slotCost = autoSlotCost(c);
+  autoBtn.hidden = false;
+  autoBtn.innerHTML = `Case auto +1<small>${slotCost === null ? "max" : `${slotCost} or`}</small>`;
+  autoBtn.disabled = !canBuyAutoSlot(c);
   main.textContent = "Attaquer";
   main.disabled = true;
   if (!id) {
@@ -533,6 +541,7 @@ function renderPick(): void {
   const id = picking?.start ?? null;
   const main = $("cp-main") as HTMLButtonElement;
   $("cp-fort").hidden = true;
+  $("cp-auto").hidden = true;
   $("cp-pass").hidden = true;
   main.textContent = "Commencer ici";
   main.disabled = id === null;
@@ -588,6 +597,13 @@ function attackOrDefend(): void {
 function fortifySelected(): void {
   if (!camp || !campSelected) return;
   if (fortify(camp, campSelected)) {
+    saveCampaign();
+    renderCampaign();
+  }
+}
+
+function buyAuto(): void {
+  if (camp && buyAutoSlot(camp)) {
     saveCampaign();
     renderCampaign();
   }
@@ -708,7 +724,7 @@ function afterChronicle(): void {
 
 function toggleAuto(id: number): void {
   if (!state) return;
-  const st = autoStatus(state, PLAYER, autoFlags);
+  const st = autoStatus(state, PLAYER, autoFlags, undefined, currentDef?.autoBonus);
   if (autoFlags.includes(id)) {
     autoFlags = autoFlags.filter((f) => f !== id);
   } else if (st.flagged.length < st.cap) {
@@ -792,6 +808,7 @@ $("pick-back").addEventListener("click", showMenu);
 $("camp-back").addEventListener("click", showMenu);
 $("cp-main").addEventListener("click", attackOrDefend);
 $("cp-fort").addEventListener("click", fortifySelected);
+$("cp-auto").addEventListener("click", buyAuto);
 $("cp-pass").addEventListener("click", passTheTurn);
 $("camp-missions").addEventListener("click", showMissions);
 $("missions-ok").addEventListener("click", () => ($("missions").hidden = true));
@@ -871,7 +888,7 @@ function frame(now: number): void {
         ownerView: phase?.view,
         selected: mode === "pick" ? (picking?.start ?? null) : live ? campSelected : null,
         attackable: live ? targets(c) : [],
-        goal: goalOf(c),
+        goal: mode === "pick" ? [] : goalOf(c),
         threats: live ? c.threats : [],
         anim,
         time: now / 1000,
@@ -888,8 +905,10 @@ function frame(now: number): void {
   const shown = mode === "result" ? null : state;
   let marks: AutoMark[] = [];
   if (shown && running && auto && autoOn) {
-    const st = autoStatus(shown, PLAYER, autoFlags);
-    marks = st.flagged.map((id) => ({ id, active: st.active.includes(id) }));
+    const st = autoStatus(shown, PLAYER, autoFlags, undefined, currentDef?.autoBonus);
+    marks = shown.bases
+      .filter((b) => b.owner === PLAYER)
+      .map((b) => ({ id: b.id, flagged: st.flagged.includes(b.id), active: st.active.includes(b.id) }));
     const count = $("auto-count");
     count.textContent = `${st.flagged.length}/${st.cap} cases`;
     count.classList.toggle("full", st.flagged.length >= st.cap);

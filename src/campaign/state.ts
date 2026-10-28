@@ -86,6 +86,8 @@ export interface CampaignState {
   /** niveau de forteresse de chaque province (0 à MAX_FORT) */
   fort: Record<ProvinceId, number>;
   gold: number;
+  /** cases de renforts automatiques achetées (en plus du ratio de la carte) */
+  autoSlots: number;
   missions: Mission[];
   nextMissionId: number;
 }
@@ -129,6 +131,14 @@ export const threatsOnCrown = (c: CampaignState): Threat[] => c.threats.filter((
 export const incomeOf = (c: CampaignState): number => provincesOf(c, CROWN).reduce((n, id) => n + INCOME[tierOf(id)], 0);
 export const fortOf = (c: CampaignState, id: ProvinceId): number => c.fort[id] ?? 0;
 /** Coût du prochain niveau de forteresse, ou null au maximum. */
+/** Prix de la prochaine case de renforts automatiques ; null une fois le maximum atteint. */
+export const AUTO_SLOT_COST = [30, 50, 80] as const;
+export const autoSlotCost = (c: CampaignState): number | null => AUTO_SLOT_COST[c.autoSlots] ?? null;
+export const canBuyAutoSlot = (c: CampaignState): boolean => {
+  const cost = autoSlotCost(c);
+  return c.status === "playing" && cost !== null && c.gold >= cost;
+};
+
 export const fortCost = (c: CampaignState, id: ProvinceId): number | null => FORT_COST[fortOf(c, id)] ?? null;
 export const canFortify = (c: CampaignState, id: ProvinceId): boolean => {
   const cost = fortCost(c, id);

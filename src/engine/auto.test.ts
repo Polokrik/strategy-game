@@ -20,10 +20,11 @@ const chain = (n: number, troops = 40) =>
 
 describe("plafond", () => {
   it("un dixième des territoires de la carte, au moins un", () => {
-    expect(AUTO_RATIO).toBeCloseTo(1 / 10);
+    expect(AUTO_RATIO).toBeCloseTo(1 / 4);
     // petites cartes : toujours 1 ; 25 territoires : 2 ; une grande carte monde : beaucoup
-    expect([3, 7, 9, 16, 19].map((n) => autoCap(n))).toEqual([1, 1, 1, 1, 1]);
-    expect([20, 25, 31, 200].map((n) => autoCap(n))).toEqual([2, 2, 3, 20]);
+    expect([3, 5, 7].map((n) => autoCap(n))).toEqual([1, 1, 1]);
+    expect([12, 20, 25, 200].map((n) => autoCap(n))).toEqual([3, 5, 6, 50]);
+    expect(autoCap(12, AUTO_RATIO, 2)).toBe(5); // cases achetées
     expect([2, 5, 6, 9, 14].map((n) => autoCap(n, THIRD))).toEqual([1, 1, 2, 3, 4]);
   });
 
@@ -55,7 +56,7 @@ describe("plafond", () => {
       [[0, 1], [1, 2], [2, 3], [3, 4]],
     );
     expect(suggestFlags(s, PLAYER, 0.4)).toEqual([1, 2]);
-    expect(suggestFlags(s, PLAYER)).toEqual([1]); // 5 territoires à 1/10 : un seul
+    expect(suggestFlags(s, PLAYER, 0.1)).toEqual([1]); // un seul à 1/10
   });
 });
 

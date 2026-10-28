@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { makeLevelAis } from "../engine/level";
 import {
+  buyAutoSlot,
   ACTIVE_MISSIONS,
   AI_MAX_FORT,
   type CampaignState,
@@ -556,5 +557,35 @@ describe("sauvegarde", () => {
     expect(c.threats).toEqual([]);
     expect(c.fort).toEqual({});
     expect(c.missions).toHaveLength(ACTIVE_MISSIONS);
+  });
+});
+
+describe("cases de renforts automatiques", () => {
+  it("l'or achète des cases, de plus en plus cher, jusqu'au maximum", () => {
+    const c = newCampaign("la-france-se-fait", 1);
+    c.gold = 1000;
+    const before = c.gold;
+    expect(buyAutoSlot(c)).not.toBeNull();
+    expect(c.autoSlots).toBe(1);
+    expect(before - c.gold).toBe(30);
+    buyAutoSlot(c);
+    buyAutoSlot(c);
+    expect(c.autoSlots).toBe(3);
+    expect(buyAutoSlot(c)).toBeNull();
+    expect(c.autoSlots).toBe(3);
+  });
+  it("refuse sans assez d'or", () => {
+    const c = newCampaign("la-france-se-fait", 1);
+    c.gold = 5;
+    expect(buyAutoSlot(c)).toBeNull();
+    expect(c.autoSlots).toBe(0);
+  });
+  it("les batailles de la campagne reçoivent les cases achetées, et une vieille sauvegarde en a 0", () => {
+    const c = newCampaign("la-france-se-fait", 1);
+    c.autoSlots = 2;
+    expect(battleLevel(c, targets(c)[0]).autoBonus).toBe(2);
+    const old = JSON.parse(serialize(c));
+    delete old.autoSlots;
+    expect(deserialize(JSON.stringify(old))?.autoSlots).toBe(0);
   });
 });
