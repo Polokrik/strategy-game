@@ -203,3 +203,9 @@ La carte jointe par Paul montre des **provinces historiques** (Flandre-Artois, G
 
 - Une sauvegarde par scénario (`conquete.campagne.<id>`) : le menu montre « Partie en cours » et « Continuer · tour N » pour le scénario choisi, et rien pour les autres. L'ancienne sauvegarde unique est reprise dans son scénario.
 - Difficulté à 5 niveaux (Zen 0,65 · Facile 0,8 · Normal 1 · Dur 1,2 · Cruel 1,45), qui multiplie la production des IA. Avec une partie en cours, le sélecteur règle cette partie (effet au tour suivant) ; sinon, la prochaine. Les valeurs Zen et Cruel sont des estimations non mesurées.
+
+## Difficulté recalée sur le journal de jeu
+
+- Journal (2 batailles, difficulté 1, auto 10, 2 cases) : victoires en 93 s et 41 s, un ordre toutes les 2,5 s, « assez facile mais agréable ». Ce rythme est plus rapide que celui des bots de calibrage (4 s).
+- L'ancien « Normal » (×1) devient « Facile » : Zen ×0,8 · Facile ×1 · Normal ×1,25 · Dur ×1,5 · Cruel ×1,8. Les sauvegardes existantes gardent leur valeur numérique, donc passent en Facile.
+- Normal ×1,25, Dur et Cruel sont des estimations : seul ×1 a été joué (n = 2). À recaler avec le prochain journal.

@@ -59,11 +59,11 @@ const KEY_JOURNAL = "conquete.journal";
 const keyOf = (scenario: string): string => `${KEY_CAMPAIGN}.${scenario}`;
 const KEY_DIFFICULTY = "conquete.difficulte";
 const DIFFICULTIES: [string, number][] = [
-  ["Zen", 0.65],
-  ["Facile", 0.8],
-  ["Normal", 1],
-  ["Dur", 1.2],
-  ["Cruel", 1.45],
+  ["Zen", 0.8],
+  ["Facile", 1],
+  ["Normal", 1.25],
+  ["Dur", 1.5],
+  ["Cruel", 1.8],
 ];
 /** Durée d'une attaque dans l'animation de fin de tour. */
 const PHASE_SECONDS = 1.6;
@@ -104,7 +104,7 @@ let phase: { report: TurnReport; i: number; start: number; view: Record<Province
 let picking: { scenario: string; start: ProvinceId | null } | null = null;
 let pickBoard: CampaignState | null = null;
 let scenarioPick = 0;
-let difficulty = 1;
+let difficulty = 1.25;
 /** Ordres donnés pendant la bataille en cours (instants en secondes de jeu) : sert à régler la difficulté sur le vrai rythme du joueur. */
 let orderTimes: number[] = [];
 
@@ -985,8 +985,8 @@ function frame(now: number): void {
 applyTheme();
 autoThreshold = Number(store(KEY_AUTO) ?? 0);
 if (!(AUTO_THRESHOLDS as readonly number[]).includes(autoThreshold)) autoThreshold = 0;
-difficulty = Number(store(KEY_DIFFICULTY) ?? 1);
-if (!DIFFICULTIES.some(([, v]) => v === difficulty)) difficulty = 1;
+difficulty = Number(store(KEY_DIFFICULTY) ?? 1.25);
+if (!DIFFICULTIES.some(([, v]) => v === difficulty)) difficulty = 1.25;
 for (const sc of SCENARIOS) saves[sc.id] = deserialize(store(keyOf(sc.id)));
 const legacy = deserialize(store(KEY_CAMPAIGN));
 if (legacy && !saves[legacy.scenario]) saves[legacy.scenario] = legacy;
