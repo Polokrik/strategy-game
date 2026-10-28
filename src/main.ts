@@ -54,12 +54,15 @@ const FIXED_DT = 1 / 60;
 const TOUCH_RANGE = 19;
 const KEY_DONE = "conquete.done";
 const KEY_AUTO = "conquete.auto";
-const KEY_CAMPAIGN = "conquete.campagne";
+const KEY_CAMPAIGN = "conquete.campagne"; // ancienne sauvegarde unique, reprise dans son scénario
+const keyOf = (scenario: string): string => `${KEY_CAMPAIGN}.${scenario}`;
 const KEY_DIFFICULTY = "conquete.difficulte";
 const DIFFICULTIES: [string, number][] = [
+  ["Zen", 0.65],
   ["Facile", 0.8],
   ["Normal", 1],
-  ["Difficile", 1.2],
+  ["Dur", 1.2],
+  ["Cruel", 1.45],
 ];
 /** Durée d'une attaque dans l'animation de fin de tour. */
 const PHASE_SECONDS = 1.6;
@@ -118,7 +121,9 @@ function loadDone(): number[] {
   }
 }
 const markDone = (i: number) => store(KEY_DONE, JSON.stringify([...new Set([...loadDone(), i])]));
-const saveCampaign = () => camp && store(KEY_CAMPAIGN, serialize(camp));
+/** Une sauvegarde par scénario : chaque campagne garde sa propre partie. */
+const saves: Record<string, CampaignState | null> = {};
+const saveCampaign = () => camp && ((saves[camp.scenario] = camp), store(keyOf(camp.scenario), serialize(camp)));
 const fmtTime = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, "0")}`;
 
 /* ---------- mise en page du canvas ---------- */
@@ -255,21 +260,32 @@ function renderCampaignMenu(): void {
   });
   $("c-title").textContent = sc.title;
   $("c-blurb").textContent = sc.blurb;
+  const saved = saves[sc.id]?.status === "playing" ? saves[sc.id]! : null;
+  // avec une partie en cours, le réglage la concerne directement (effet dès le prochain tour) ; sinon c'est celui de la nouvelle partie
+  const level = saved ? (saved.difficulty ?? 1) : difficulty;
   segmented(
     $("difficulty"),
     DIFFICULTIES.map(([name]) => name),
-    DIFFICULTIES.findIndex(([, v]) => v === difficulty),
+    DIFFICULTIES.findIndex(([, v]) => v === level),
     (i) => {
-      difficulty = DIFFICULTIES[i][1];
-      store(KEY_DIFFICULTY, String(difficulty));
+      if (saved) {
+        saved.difficulty = DIFFICULTIES[i][1];
+        camp = saved;
+        saveCampaign();
+      } else {
+        difficulty = DIFFICULTIES[i][1];
+        store(KEY_DIFFICULTY, String(difficulty));
+      }
       renderMenu();
     },
   );
-  const saved = camp && camp.status === "playing" ? camp : null;
+  $("diff-note").textContent = saved
+    ? "Difficulté de cette partie, effet immédiat."
+    : "Difficulté de la prochaine partie.";
   const cont = $("c-continue") as HTMLButtonElement;
   cont.disabled = !saved;
-  cont.textContent = saved ? `Continuer · ${yearOf(saved)}` : "Continuer";
-  $("c-eyebrow").textContent = saved ? `Partie en cours · ${scenarioOf(saved).title}` : "Histoire de France";
+  cont.textContent = saved ? `Continuer · tour ${saved.turn + 1}` : "Continuer";
+  $("c-eyebrow").textContent = saved ? "Partie en cours" : "Aucune partie en cours";
   // la carte d'aperçu : la partie en cours, sinon le départ du scénario choisi
   state = null;
   preview = saved ?? newCampaign(sc.custom ? "la-france-se-fait" : sc.id, 1);
@@ -798,9 +814,14 @@ $("tab-campaign").addEventListener("click", () => {
   tab = "campaign";
   showMenu();
 });
-$("c-continue").addEventListener("click", () => camp && camp.status === "playing" && showCampaign());
+$("c-continue").addEventListener("click", () => {
+  const saved = saves[SCENARIOS[scenarioPick].id];
+  if (saved?.status !== "playing") return;
+  camp = saved;
+  showCampaign();
+});
 $("c-new").addEventListener("click", () => {
-  if (camp?.status === "playing" && !window.confirm("Une campagne est en cours. La remplacer par une nouvelle partie ?")) return;
+  if (saves[SCENARIOS[scenarioPick].id]?.status === "playing" && !window.confirm("Cette campagne est en cours. La remplacer par une nouvelle partie ?")) return;
   if (SCENARIOS[scenarioPick].custom) return startPicking();
   openCampaign(newCampaign(SCENARIOS[scenarioPick].id, undefined, difficulty));
 });
@@ -922,7 +943,10 @@ autoThreshold = Number(store(KEY_AUTO) ?? 0);
 if (!(AUTO_THRESHOLDS as readonly number[]).includes(autoThreshold)) autoThreshold = 0;
 difficulty = Number(store(KEY_DIFFICULTY) ?? 1);
 if (!DIFFICULTIES.some(([, v]) => v === difficulty)) difficulty = 1;
-camp = deserialize(store(KEY_CAMPAIGN));
+for (const sc of SCENARIOS) saves[sc.id] = deserialize(store(keyOf(sc.id)));
+const legacy = deserialize(store(KEY_CAMPAIGN));
+if (legacy && !saves[legacy.scenario]) saves[legacy.scenario] = legacy;
+camp = null;
 const finished = loadDone();
 const firstTodo = LEVELS.findIndex((_, i) => !finished.includes(i));
 selected = firstTodo === -1 ? LEVELS.length - 1 : firstTodo;

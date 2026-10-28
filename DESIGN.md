@@ -198,3 +198,8 @@ La carte jointe par Paul montre des **provinces historiques** (Flandre-Artois, G
 - Le ratio 1/10 était trop faible en jeu (12 territoires : 1 case). Passé à 1/4 (12 → 3). Les mesures ayant mené à 1/10 sont obsolètes : à re-mesurer, l'auto est maintenant plus fort.
 - L'or achète des cases en plus (30, 50, 80 or ; 3 max), valables dans toutes les batailles de la campagne, pas de persistance entre campagnes.
 - Chaque territoire à soi affiche une pastille « + » quand l'auto est activé : on la touche (le territoire) pour le cocher.
+
+## Sauvegardes par campagne et difficulté
+
+- Une sauvegarde par scénario (`conquete.campagne.<id>`) : le menu montre « Partie en cours » et « Continuer · tour N » pour le scénario choisi, et rien pour les autres. L'ancienne sauvegarde unique est reprise dans son scénario.
+- Difficulté à 5 niveaux (Zen 0,65 · Facile 0,8 · Normal 1 · Dur 1,2 · Cruel 1,45), qui multiplie la production des IA. Avec une partie en cours, le sélecteur règle cette partie (effet au tour suivant) ; sinon, la prochaine. Les valeurs Zen et Cruel sont des estimations non mesurées.
