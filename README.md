@@ -22,7 +22,7 @@ Lisibilité State.io sur la carte, charme cartoon type Civilization dans l'habil
 1. Premiers pas : glisser, capturer. 1 IA défensive.
 2. Traversées : îles et traversées maritimes. 1 IA défensive.
 3. Interception : 1 IA agressive.
-4. Renforts : renforts automatiques (seuil 10 / 20 / 30). 1 IA opportuniste.
+4. Renforts : renforts automatiques bornés (2 plus gros territoires de l'arrière, seuil 10 / 20 / 30, 25 % de pertes). 1 IA opportuniste.
 5. Deux adversaires : opportuniste + défensive.
 6. Trois adversaires : agressive + opportuniste + défensive.
 

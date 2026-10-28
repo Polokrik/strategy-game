@@ -229,6 +229,30 @@ function drawMarker(ctx: CanvasRenderingContext2D, b: Base): void {
   ctx.fillText(String(Math.floor(b.troops)), b.x, b.y + 0.3);
 }
 
+/** Pastille verte à chevrons : ce territoire envoie ses renforts tout seul. */
+function drawAutoBadge(ctx: CanvasRenderingContext2D, b: Base): void {
+  const x = b.x + 6.6;
+  const y = b.y - 6.6;
+  ctx.beginPath();
+  ctx.arc(x, y, 3, 0, Math.PI * 2);
+  ctx.fillStyle = "#3fb248";
+  ctx.fill();
+  ctx.strokeStyle = INK;
+  ctx.lineWidth = 0.7;
+  ctx.stroke();
+  ctx.strokeStyle = "#fff";
+  ctx.lineWidth = 0.8;
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  for (const dx of [-0.9, 0.7]) {
+    ctx.beginPath();
+    ctx.moveTo(x + dx - 0.8, y - 1.3);
+    ctx.lineTo(x + dx + 0.6, y);
+    ctx.lineTo(x + dx - 0.8, y + 1.3);
+    ctx.stroke();
+  }
+}
+
 /** Les troupes forment un flux de points : leur nombre se lit à l'œil, et deux flux qui se rencontrent s'annulent à la vue. */
 function drawSquads(ctx: CanvasRenderingContext2D, s: GameState): void {
   for (const q of s.squads) {
@@ -344,6 +368,7 @@ export function drawScene(
   s: GameState | null,
   selected: number | null,
   preview: Preview | null,
+  autoIds: readonly number[] = [],
 ): void {
   drawSea(ctx, view.w, view.h);
   if (!s) return;
@@ -354,6 +379,7 @@ export function drawScene(
   drawSeaLinks(ctx, s);
   if (preview) drawPreview(ctx, preview);
   for (const b of s.bases) drawMarker(ctx, b);
+  for (const id of autoIds) drawAutoBadge(ctx, s.bases[id]);
   drawSquads(ctx, s);
   drawFights(ctx, s);
   ctx.restore();

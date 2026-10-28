@@ -55,6 +55,7 @@ Contours `3px` encre sur les éléments d'interface, `0,7` unité monde sur la c
 - **Interception** : étoile de bande dessinée dorée qui tourne et s'efface en 0,8 s.
 - **Glisser** : territoire de départ entouré de blanc ; trajet en blanc avec contour encre et pointe de flèche ; croix rouge si la cible est inatteignable.
 - **Traversées maritimes** : pointillés blancs.
+- **Renforts automatiques** : pastille verte à double chevron sur chaque territoire automatisé (2 au plus).
 
 ## Composants
 

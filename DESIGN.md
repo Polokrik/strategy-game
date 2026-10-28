@@ -96,11 +96,33 @@ Hors MVP : époques, civilisation, automatisation, PC long, monde complet, tutor
 Direction fixée : lisibilité type State.io sur la carte, charme cartoon type Civilization dans l'habillage. Détail, tokens et emprunts : `docs/STYLE.md`. Aucune monétisation reprise des références (pubs, gemmes, packs, vidéo contre récompense).
 
 ### Renforts automatiques (demande de Paul)
-**Spécification** : un territoire de l'arrière (aucun voisin qui ne soit pas au joueur) qui atteint le seuil choisi (**10, 20 ou 30**, ou désactivé) envoie toutes ses troupes sauf une vers le front le plus proche, en passant par les territoires du joueur. Passage toutes les secondes. Le passif ne choisit jamais d'attaquer. Réservé au joueur, comme les jokers. Introduit par un chapitre dédié (« Renforts »), puis disponible aux chapitres suivants.
+**Spécification** : un territoire de l'arrière (aucun voisin qui ne soit pas au joueur), parmi **les 2 plus gros**, qui atteint le seuil choisi (**10, 20 ou 30**, ou désactivé) envoie toutes ses troupes sauf une vers le front le plus proche, en passant par les territoires du joueur. **Un quart des troupes se perd en route.** Les territoires automatisés sont marqués d'une pastille verte à chevrons. Le passif ne choisit jamais d'attaquer. Réservé au joueur, comme les jokers. Introduit par un chapitre dédié (« Renforts »).
 
-**Écart avec ce document** : la phase 5 prévoyait l'automatisation débloquée par la technologie, avec un plafond, et la décrivait comme « mécanique de stratégie, pas confort qui joue à la place du joueur ». Elle est ici avancée avant la campagne, sans plafond autre que le seuil.
+**Écart avec ce document** : l'automatisation était hors MVP (phase 5, débloquée par la technologie, avec un plafond). Elle est avancée avant la campagne, avec un plafond.
 
-**Prémisse faible mesurée** : sur 20 parties par case avec un joueur qui décide toutes les 6 s, les renforts font passer la victoire de 25-35 % à **95 % au seuil 10** (70-80 % à 30). Le seuil n'est donc pas une vraie décision (10 domine), et la fonction rend les chapitres 4 à 6 faciles. Un coût fixe de 2 ou 3 troupes par convoi ne change pas ce constat (écart dans le bruit). À trancher : assistant de confort assumé (alors on durcit les IA quand il est actif) ou mécanique de stratégie bornée (alors plafond de convois simultanés, ou seuil lié à un choix de coût réel).
+**Pourquoi ces bornes (mesuré, joueur lent, 24 parties par case, marge ±10 points)** : sans bornes, les renforts font passer la victoire de ~30 % à 95 %, parce qu'ils vident en continu les territoires de l'arrière qui, pleins, ne produisent plus. Plafonner le nombre de convois ou les ralentir ne change presque rien (96-100 % avec un seul convoi lent). Une taxe seule non plus (88 % à 40 %). Le levier est le **nombre de territoires automatisés** : 2 territoires + 25 % de pertes donnent 60-70 %, soit une vraie aide sans pilote automatique.
+
+**Déblocage futur** : le plafond est le bouton naturel d'une progression (1, 2, 3 territoires, ou seuils supplémentaires) débloquée par la technologie de la phase 5, ce qui respecte ta règle. Une **vente en boutique** d'un avantage de jeu la contredit (« rien qui s'achète ne donne un avantage en partie ») : soit le déblocage se gagne en jouant, soit la boutique reste cosmétique, soit tu assumes de changer la règle. Rien n'est construit : le point d'accroche est le drapeau `auto` du chapitre et `AUTO_RULES`.
 
 ### Jokers (phase 3), rappel
 Le patron de fiche de commandant des références (compétence, % de garnison, cibles, temps de recharge, niveau) convient à l'écran des jokers. Le design actuel les fait gagner à la jauge et non par recharge ; à choisir à la phase 3.
+
+
+---
+
+## État d'avancement (après l'itération 2)
+
+| Phase | État | Ce qui reste |
+|---|---|---|
+| 1. Prototype de bataille | **Fait**, critère validé par Paul (fun, rendu, gameplay) | rien ; les cartes sont générées par graine au lieu d'une carte fixe |
+| 2. IA et variété | **Fait** : 3 personnalités, 1 à 3 adversaires, 6 chapitres (une notion chacun) | valider l'équilibrage en jeu réel (calibré avec un bot) |
+| 3. Jokers | Non commencé | ralenti d'abord, jauge de charge, plafond par partie, écran de fiche (patron de la référence) |
+| 4. Mini-campagne | Non commencé, **dernier point du MVP** | carte réelle réduite, couche par tours, une bataille par territoire, sauvegarde/reprise, rattrapage anti-boule de neige en campagne |
+| 5. Époques et civilisation | Partiel : paliers **visuels** (disques) et renforts bornés | paliers de bases comme mécanique (village, ville, capitale), époques, déblocage du plafond des renforts par la technologie |
+| 6. Extensions | Non commencé | campagnes historiques, mode long, PC, modèle économique |
+
+**Chantiers non listés dans ce document** : choix et source des cartes réelles (phase 4 en dépend), installation sur téléphone (le jeu tourne dans un navigateur ; plein écran, icône, ensuite Capacitor), sons et retours haptiques, sauvegarde (aujourd'hui seulement les coches de chapitres), réglages, daltonisme (emblème par camp).
+
+**Ce qui est hors périmètre MVP mais déjà là** : renforts automatiques (listés « hors MVP » plus haut). Les jokers (phase 3) ne sont pas dans le MVP non plus : le plus court chemin vers le MVP est la phase 4.
+
+**Questions ouvertes** : twist (réglé : interception), stack (réglé : web/canvas, moteur à rediscuter après la phase 4), modèle économique (aucune monétisation ; la piste « déblocage en boutique » est à trancher, voir plus haut).

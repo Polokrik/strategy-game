@@ -83,7 +83,7 @@ export const LEVELS: LevelDef[] = [
   {
     title: "Renforts",
     notion:
-      "Les territoires de l'arrière s'ennuient. Choisis un seuil (10, 20 ou 30) : dès qu'un territoire sans voisin hostile l'atteint, il envoie ses troupes vers le front le plus proche. Tu gardes la main sur chaque attaque.",
+      "Les territoires de l'arrière s'ennuient. Choisis un seuil (10, 20 ou 30) : dès que l'un des 2 plus gros territoires de l'arrière l'atteint (flèches vertes), il envoie ses troupes vers le front le plus proche. Un quart se perd en route, et tu gardes la main sur chaque attaque.",
     ais: [{ owner: 2, personality: OPPORTUNIST, handicap: 0.55 }],
     auto: true,
     build: (seed = 21) =>

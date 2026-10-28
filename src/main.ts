@@ -3,7 +3,7 @@ import "@fontsource/fredoka/600.css";
 import "@fontsource/fredoka/700.css";
 import "@fontsource/lilita-one/400.css";
 
-import { AUTO_THRESHOLDS, makeAutoReinforce } from "./engine/auto";
+import { AUTO_THRESHOLDS, autoSources, makeAutoReinforce } from "./engine/auto";
 import { LEVELS, WORLD_H, WORLD_W, makeLevelAis } from "./engine/level";
 import { findPath, send, step } from "./engine/sim";
 import { type Base, type GameState, PLAYER } from "./engine/types";
@@ -262,7 +262,8 @@ function frame(now: number): void {
     updateShare(state);
   }
   const shown = mode === "result" ? null : state;
-  drawScene(ctx, view, shown, drag?.from.id ?? null, shown && running ? previewOf(shown) : null);
+  const automated = shown && running && auto && autoThreshold > 0 ? autoSources(shown, PLAYER) : [];
+  drawScene(ctx, view, shown, drag?.from.id ?? null, shown && running ? previewOf(shown) : null, automated);
   requestAnimationFrame(frame);
 }
 
