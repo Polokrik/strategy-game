@@ -228,3 +228,29 @@ describe("victoire", () => {
     expect(s.winner).toBe(PLAYER);
   });
 });
+
+describe("artillerie et arbalétriers", () => {
+  const duel = () =>
+    createState(
+      [
+        { x: 0, y: 0, owner: PLAYER, troops: 20, capacity: 20 },
+        { x: 20, y: 0, owner: ENEMY, troops: 10, capacity: 10 },
+      ],
+      [[0, 1]],
+    );
+  it("l'artillerie fait compter chaque assaillant pour plus", () => {
+    const s = duel();
+    s.attackMul[PLAYER] = 1.25;
+    send(s, 0, 1, PLAYER, 0.5); // 10 assaillants = 12,5 points contre 10 défenseurs
+    run(s, 5);
+    expect(s.bases[1].owner).toBe(PLAYER);
+    expect(s.bases[1].troops).toBeCloseTo(2, 5);
+  });
+  it("les arbalétriers font tenir un territoire qui serait tombé", () => {
+    const s = duel();
+    s.defenseMul[ENEMY] = 1.25;
+    send(s, 0, 1, PLAYER, 0.55); // 11 assaillants = 8,8 points contre 10 défenseurs
+    run(s, 5);
+    expect(s.bases[1].owner).toBe(ENEMY);
+  });
+});

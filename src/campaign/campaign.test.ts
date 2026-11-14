@@ -624,4 +624,16 @@ describe("époques et date", () => {
     const r = passTurn(c);
     expect(r.lines.join(" ")).toContain("Nouvelle époque : Royaume");
   });
+  it("les époques se cumulent : arbalétriers à 12 provinces, artillerie à 20", () => {
+    const c = quiet();
+    const t = targets(c)[0];
+    c.reach = 12;
+    let s = battleLevel(c, t).build();
+    expect(Object.values(s.defenseMul)).toEqual([1.25]);
+    expect(Object.values(s.attackMul)).toEqual([]);
+    c.reach = 20;
+    s = battleLevel(c, t).build();
+    expect(Object.values(s.speedMul)).toEqual([1.3]);
+    expect(Object.values(s.attackMul)).toEqual([1.25]);
+  });
 });

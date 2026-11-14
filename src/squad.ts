@@ -50,7 +50,41 @@ function cavalrySvg(): string {
   </svg>`;
 }
 
-/** Les cartes, dans l'ordre : les trois premières suivent ERAS ; les suivantes sont des silhouettes à concevoir. */
+/** Arbalétrier : le fantassin, chapel de fer et arbalète en travers. */
+function crossbowSvg(): string {
+  return `<svg viewBox="0 0 120 120" aria-hidden="true">
+    <ellipse cx="60" cy="106" rx="32" ry="9" fill="rgba(43,42,58,.18)"/>
+    <g stroke="${INK}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+      <ellipse cx="56" cy="88" rx="25" ry="19" fill="${BLUE}"/>
+      <circle cx="56" cy="54" r="22" fill="${SKIN}"/>
+      <path d="M28 50 Q56 22 84 50 Z" fill="#9aa0b4"/>
+      <line x1="24" y1="50" x2="88" y2="50" stroke-width="5"/>
+      <line x1="50" y1="84" x2="106" y2="72" stroke="#8a5a2b" stroke-width="5"/>
+      <path d="M96 52 Q112 72 100 94" fill="none" stroke="#8a5a2b" stroke-width="4"/>
+      <line x1="96" y1="52" x2="100" y2="94" stroke-width="1.5"/>
+    </g>
+    <circle cx="48" cy="60" r="2.8" fill="${INK}"/><circle cx="64" cy="60" r="2.8" fill="${INK}"/>
+    <path d="M50 69 H62" stroke="${INK}" stroke-width="3" stroke-linecap="round"/>
+  </svg>`;
+}
+
+/** Canon : fût de bronze sur affût à roues, boulets au pied. */
+function cannonSvg(): string {
+  return `<svg viewBox="0 0 120 120" aria-hidden="true">
+    <ellipse cx="60" cy="106" rx="40" ry="8" fill="rgba(43,42,58,.18)"/>
+    <g stroke="${INK}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round">
+      <path d="M30 78 L92 44 L100 58 L42 92 Z" fill="#c9a23f"/>
+      <path d="M88 42 L102 36 L108 54 L98 60 Z" fill="#a8842c"/>
+      <path d="M24 84 L60 84 L70 98 L20 98 Z" fill="#8a5a2b"/>
+      <circle cx="44" cy="92" r="15" fill="#c98a4b"/>
+      <circle cx="44" cy="92" r="4" fill="${INK}"/>
+      <path d="M44 77 V107 M29 92 H59" stroke-width="2"/>
+      <circle cx="84" cy="100" r="6" fill="#55586b"/><circle cx="96" cy="100" r="6" fill="#55586b"/><circle cx="90" cy="90" r="6" fill="#55586b"/>
+    </g>
+  </svg>`;
+}
+
+/** Les cartes, dans l'ordre des époques (ERAS). Une carte sans dessin serait une silhouette « ? » à concevoir. */
 export const UNITS: UnitCard[] = [
   {
     id: "infantry",
@@ -68,8 +102,22 @@ export const UNITS: UnitCard[] = [
     stats: [{ label: "Vitesse", value: "×1,3" }],
     draw: cavalrySvg,
   },
-  { id: "next-1", name: "Grand royaume", from: 12 },
-  { id: "next-2", name: "France", from: 20 },
+  {
+    id: "crossbow",
+    name: "Arbalétriers",
+    from: ERAS[2].from,
+    blurb: "Arrivés avec le Grand royaume. Postés sur les murs, ils font payer cher chaque assaut contre vos territoires.",
+    stats: [{ label: "Défense des territoires", value: "×1,25" }],
+    draw: crossbowSvg,
+  },
+  {
+    id: "artillery",
+    name: "Artillerie",
+    from: ERAS[3].from,
+    blurb: "Arrivée avec la France. Les canons ouvrent les murailles : vos assauts frappent plus fort.",
+    stats: [{ label: "Force des assauts", value: "×1,25" }],
+    draw: cannonSvg,
+  },
 ];
 
 export const unlocked = (u: UnitCard, reach: number): boolean => u.from === null || reach >= u.from;

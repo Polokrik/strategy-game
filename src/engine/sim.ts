@@ -45,6 +45,8 @@ export function createState(bases: Omit<Base, "id">[], edges?: Edge[]): GameStat
     nextSquadId: 1,
     productionMul: {},
     speedMul: {},
+    attackMul: {},
+    defenseMul: {},
     winner: null,
   };
 }
@@ -116,15 +118,17 @@ export function send(
   return true;
 }
 
-function arrive(base: Base, squad: Squad): void {
+function arrive(s: GameState, base: Base, squad: Squad): void {
   if (base.owner === squad.owner) {
     base.troops += squad.count;
     return;
   }
-  base.troops -= squad.count;
+  // chaque assaillant vaut `power` défenseurs : l'artillerie l'augmente, les arbalétriers d'en face le réduisent
+  const power = (s.attackMul[squad.owner] ?? 1) / (s.defenseMul[base.owner] ?? 1);
+  base.troops -= squad.count * power;
   if (base.troops < 0) {
     base.owner = squad.owner;
-    base.troops = -base.troops;
+    base.troops = -base.troops / power; // les survivants, comptés en assaillants
   }
 }
 
@@ -178,7 +182,7 @@ export function step(s: GameState, dt: number): void {
     q.y = to.y;
     // un territoire qui a changé de main en cours de route arrête la troupe
     if (q.path.length === 1 || to.owner !== q.owner) {
-      arrive(to, q);
+      arrive(s, to, q);
       q.count = 0;
     } else {
       q.from = to.id;

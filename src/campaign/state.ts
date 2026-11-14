@@ -116,8 +116,12 @@ export const yearOf = (c: CampaignState): number => {
 export const ERAS = [
   { from: 0, name: "Domaine royal", perk: "" },
   { from: 6, name: "Royaume", perk: "Cavalerie : vos troupes avancent plus vite." },
+  { from: 12, name: "Grand royaume", perk: "Arbalétriers : vos territoires résistent mieux aux assauts." },
+  { from: 20, name: "France", perk: "Artillerie : vos assauts frappent plus fort." },
 ] as const;
 export const CAVALRY_SPEED = 1.3;
+export const CROSSBOW_DEFENSE = 1.25;
+export const ARTILLERY_ATTACK = 1.25;
 export const eraIndex = (reach: number): number => ERAS.reduce((n, e, i) => (reach >= e.from ? i : n), 0);
 export const eraOf = (c: CampaignState): (typeof ERAS)[number] => ERAS[eraIndex(c.reach)];
 export const provincesOf = (c: CampaignState, f: FactionId): ProvinceId[] =>

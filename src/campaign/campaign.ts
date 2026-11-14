@@ -31,7 +31,9 @@ import {
   type TurnReport,
   autoSlotCost,
   canBuyAutoSlot,
+  ARTILLERY_ATTACK,
   CAVALRY_SPEED,
+  CROSSBOW_DEFENSE,
   canFortify,
   draw,
   eraIndex,
@@ -126,9 +128,12 @@ function battleState(tier: Tier, bottom: number, top: number, seed: number): Gam
   return s;
 }
 
-/** Les avantages de l'époque du joueur : la cavalerie, dès le Royaume. */
+/** Les avantages de l'époque du joueur, qui se cumulent : cavalerie, puis arbalétriers, puis artillerie. */
 function withEra(c: CampaignState, s: GameState): GameState {
-  if (eraIndex(c.reach) >= 1) s.speedMul[START.owner] = CAVALRY_SPEED;
+  const era = eraIndex(c.reach);
+  if (era >= 1) s.speedMul[START.owner] = CAVALRY_SPEED;
+  if (era >= 2) s.defenseMul[START.owner] = CROSSBOW_DEFENSE;
+  if (era >= 3) s.attackMul[START.owner] = ARTILLERY_ATTACK;
   return s;
 }
 

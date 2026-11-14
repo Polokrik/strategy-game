@@ -36,6 +36,8 @@ Trois personnalités d'IA, même moteur, paramètres différents (`src/engine/ai
 
 ## Lancer
 
+Sous Windows : double-clic sur `jouer.bat` (installe au premier lancement, puis ouvre le jeu dans le navigateur). `mettre-a-jour.bat` récupère la dernière version puis lance le jeu. Node.js doit être installé.
+
 ```bash
 npm install
 npm run dev     # http://localhost:5173, ouvrable depuis le téléphone sur le même réseau

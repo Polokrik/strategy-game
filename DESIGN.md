@@ -221,3 +221,9 @@ La carte jointe par Paul montre des **provinces historiques** (Flandre-Artois, G
 - Barre d'onglets en bas (Chapitres · Campagne · Escouade) à la place des onglets du haut. Emprunt de comportement uniquement (le niveau global, les gemmes, les packs et les pubs vus sur les captures ne sont pas repris).
 - Écran « Escouade » : galerie d'unités avec silhouettes verrouillées, mise en avant de l'unité choisie, fiche avec ses chiffres. Déblocage par la taille du royaume dans la campagne choisie, sans achat. Les deux dernières cartes (12 et 20 provinces) sont des silhouettes « ? » : aucune unité n'est conçue derrière.
 - Personnages dessinés en vectoriel (fantassin, cavalier), sans asset ; remplaçables plus tard.
+
+## Époques 2 et 3, lanceurs Windows
+
+- « Grand royaume » (12 provinces) : arbalétriers, les territoires du joueur résistent ×1,25 aux assauts (`GameState.defenseMul`). « France » (20) : artillerie, ses assauts frappent ×1,25 (`attackMul`). Les bonus se cumulent avec la cavalerie. Valeurs au jugé, aucune mesure d'équilibre ; seul le joueur en profite, donc la fin de campagne devient plus facile.
+- Ces deux unités n'ont pas de dessin propre sur la carte de bataille (seule la cavalerie en a un).
+- `jouer.bat` (installe si besoin, lance et ouvre le navigateur) et `mettre-a-jour.bat` (git pull, npm install, puis jouer). Écrits sans pouvoir être exécutés ici (Linux) : à valider sous Windows.

@@ -55,6 +55,10 @@ export interface GameState {
   productionMul: Record<OwnerId, number>;
   /** vitesse des troupes en marche (cavalerie des époques avancées) ; 1 par défaut */
   speedMul: Record<OwnerId, number>;
+  /** force d'un assaut contre un territoire adverse (artillerie) ; 1 par défaut */
+  attackMul: Record<OwnerId, number>;
+  /** résistance des territoires d'un camp aux assauts (arbalétriers) ; 1 par défaut */
+  defenseMul: Record<OwnerId, number>;
   /** null tant que la partie est en cours */
   winner: OwnerId | null;
 }
