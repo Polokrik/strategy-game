@@ -36,6 +36,8 @@ Trois personnalités d'IA, même moteur, paramètres différents (`src/engine/ai
 
 ## Lancer
 
+**Le plus simple : ouvrir `Conquete.html`** (double-clic). Tout le jeu est dans ce fichier : ni Node, ni installation, ni réseau. Il est régénéré par `npm run build:single` et doit l'être à chaque changement du jeu.
+
 Sous Windows : double-clic sur `jouer.bat` (installe au premier lancement, puis ouvre le jeu dans le navigateur). `mettre-a-jour.bat` récupère la dernière version puis lance le jeu. Node.js doit être installé.
 
 ```bash

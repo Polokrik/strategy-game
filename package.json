@@ -7,12 +7,14 @@
     "dev": "vite --host",
     "build": "tsc --noEmit && vite build",
     "preview": "vite preview --host",
-    "test": "vitest run"
+    "test": "vitest run",
+    "build:single": "vite build --config vite.single.config.ts && node -e \"require('fs').copyFileSync('dist-single/index.html','Conquete.html')\""
   },
   "devDependencies": {
     "@types/d3-delaunay": "^6.0.4",
     "typescript": "^5.6.0",
     "vite": "^6.0.0",
+    "vite-plugin-singlefile": "^2.3.4",
     "vitest": "^2.1.0"
   },
   "dependencies": {
