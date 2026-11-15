@@ -2,3 +2,4 @@ node_modules
 dist
 tools/departements.geojson
 dist-single
+tools/ne_50m_land.geojson

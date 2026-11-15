@@ -1146,3 +1146,93 @@ body {
 #camp-hud .row {
   flex-wrap: wrap;
 }
+
+/* ---------- campagne Monde ---------- */
+#world-hud {
+  position: fixed;
+  top: max(10px, env(safe-area-inset-top));
+  left: 12px;
+  right: 12px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+#world-hud .zoom {
+  display: flex;
+  gap: 6px;
+  margin-left: auto;
+}
+#world-panel {
+  position: fixed;
+  left: 50%;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  width: min(calc(100% - 24px), 24rem);
+  padding: 10px 14px 14px;
+  max-height: 62%;
+  overflow-y: auto;
+}
+#world-panel h2 {
+  margin: 0 0 4px;
+  font-size: 1.5rem;
+}
+#world-panel #wp-note {
+  margin: 6px 0 8px;
+  font-size: 0.88rem;
+  line-height: 1.3;
+  color: var(--ink-soft);
+}
+#wp-send {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin-top: 8px;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+#wp-send[hidden] {
+  display: none;
+}
+#wp-range {
+  width: 100%;
+  height: 28px;
+  accent-color: var(--blue-500);
+}
+#wp-log {
+  list-style: none;
+  margin: 0 0 10px;
+  padding: 6px 10px;
+  border-radius: 12px;
+  background: var(--lav-100);
+  font-size: 0.8rem;
+  line-height: 1.3;
+  text-align: left;
+  color: var(--ink-soft);
+}
+#wp-log:empty {
+  display: none;
+}
+#wp-log li + li {
+  margin-top: 3px;
+}
+.chip.good {
+  background: var(--green-400);
+  color: #fff;
+}
+#tabs button {
+  min-width: 0;
+}
+@media (orientation: landscape) and (min-width: 560px) {
+  #world-panel {
+    left: auto;
+    right: 12px;
+    bottom: 12px;
+    transform: none;
+    width: var(--side, 340px);
+    max-height: calc(100% - 24px);
+  }
+  #world-hud {
+    right: calc(var(--side, 340px) + 24px);
+  }
+}

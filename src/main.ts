@@ -48,6 +48,8 @@ import { findPath, send, step } from "./engine/sim";
 import { type Base, type GameState, PLAYER } from "./engine/types";
 import { heroSvg, launchConfetti } from "./hero";
 import { renderSquad } from "./squad";
+import { WORLD_SIZE } from "./world/render";
+import { createWorldScreen } from "./world/screen";
 import { type AutoMark, type Preview, type View, drawScene, shares } from "./render";
 import { FACTION, applyTheme } from "./theme";
 
@@ -74,7 +76,7 @@ const $ = (id: string) => document.getElementById(id)!;
 const canvas = $("game") as HTMLCanvasElement;
 const ctx = canvas.getContext("2d")!;
 
-type Mode = "menu" | "game" | "result" | "campaign" | "chronicle" | "pick";
+type Mode = "menu" | "game" | "result" | "campaign" | "chronicle" | "pick" | "world";
 
 let state: GameState | null = null;
 let currentDef: LevelDef = LEVELS[0];
@@ -83,7 +85,9 @@ let auto: ((s: GameState, dt: number) => void) | null = null;
 let running = false;
 let paused = false;
 let mode: Mode = "menu";
-let tab: "chapters" | "campaign" | "squad" = "chapters";
+let tab: "chapters" | "campaign" | "world" | "squad" = "chapters";
+/** Bataille lancée par un autre écran (la campagne Monde) : il reçoit l'issue et reprend la main. */
+let external: ((won: boolean) => void) | null = null;
 let unitPick = "cavalry";
 let selected = 0; // chapitre choisi dans le menu
 let current = 0; // chapitre en cours
@@ -136,6 +140,8 @@ const fmtTime = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60
 
 const onCampaignMap = () => mode === "campaign" || mode === "chronicle" || mode === "pick" || (mode === "menu" && tab === "campaign");
 
+const onWorldMap = () => mode === "world" || (mode === "menu" && tab === "world");
+
 /** Zone du canvas laissée à la carte, en pixels CSS, selon ce que l'interface recouvre. */
 /** Écran large (PC, tablette ou téléphone couché) : les commandes passent dans une colonne à droite, la carte prend le reste. */
 const isWide = () => window.matchMedia("(orientation: landscape) and (min-width: 560px)").matches;
@@ -149,11 +155,13 @@ function mapInsets(): { top: number; bottom: number; left: number; right: number
     if (mode === "menu") return { top: 16, bottom: 16, left: 12, right: side };
     if (mode === "campaign") return { top: height("camp-hud") + 22, bottom: phase ? 70 : 16, left: 12, right: side };
     if (mode === "pick") return { top: 64, bottom: 16, left: 12, right: side };
+    if (mode === "world") return { top: height("world-hud") + 22, bottom: 16, left: 12, right: side };
     return { top: 62, bottom: 18, left: 12, right: $("dock").hidden ? 12 : side };
   }
   if (mode === "menu") return { top: 74, bottom: height("menu-bottom") + 20, left: 0, right: 0 };
   if (mode === "campaign") return { top: 112, bottom: phase ? 70 : height("camp-panel") + 20, left: 0, right: 0 };
   if (mode === "pick") return { top: 74, bottom: height("camp-panel") + 20, left: 0, right: 0 };
+  if (mode === "world") return { top: height("world-hud") + 22, bottom: height("world-panel") + 20, left: 0, right: 0 };
   return { top: 62, bottom: $("dock").hidden ? 18 : height("dock") + 24, left: 0, right: 0 };
 }
 
@@ -162,7 +170,7 @@ function layout(): void {
   document.documentElement.style.setProperty("--side", `${sideWidth()}px`);
   canvas.width = Math.round(window.innerWidth * dpr);
   canvas.height = Math.round(window.innerHeight * dpr);
-  const world = onCampaignMap() ? CAMPAIGN_WORLD : { w: WORLD_W, h: WORLD_H };
+  const world = onWorldMap() ? WORLD_SIZE : onCampaignMap() ? CAMPAIGN_WORLD : { w: WORLD_W, h: WORLD_H };
   const { top, bottom, left, right } = mapInsets();
   const areaW = Math.max(80, window.innerWidth - left - right) * dpr;
   const areaH = Math.max(80, window.innerHeight - top - bottom) * dpr;
@@ -205,6 +213,8 @@ function setMode(next: Mode): void {
   $("chronicle").hidden = next !== "chronicle";
   $("camp-hud").hidden = next !== "campaign";
   $("pick-hud").hidden = next !== "pick";
+  $("world-hud").hidden = next !== "world";
+  $("world-panel").hidden = next !== "world";
   $("camp-panel").hidden = !(next === "pick" || (next === "campaign" && phase === null));
   $("camp-banner").hidden = next !== "campaign" || phase === null;
   $("missions").hidden = true;
@@ -223,13 +233,22 @@ function showMenu(): void {
 }
 
 function renderMenu(): void {
-  for (const t of ["chapters", "campaign", "squad"] as const) {
+  for (const t of ["chapters", "campaign", "world", "squad"] as const) {
     $(`tab-${t}`).setAttribute("aria-selected", String(tab === t));
     $(`pane-${t}`).hidden = tab !== t;
   }
   if (tab === "campaign") renderCampaignMenu();
+  else if (tab === "world") renderWorldMenu();
   else if (tab === "squad") renderSquadMenu();
   else renderChapters();
+}
+
+function renderWorldMenu(): void {
+  state = null;
+  const saved = world.saved();
+  const cont = $("w-continue") as HTMLButtonElement;
+  cont.disabled = !saved;
+  cont.textContent = saved ? `Continuer · ${world.describeSave()}` : "Continuer";
 }
 
 /** Galerie des unités : la campagne choisie dit jusqu'où le royaume s'est étendu. */
@@ -372,6 +391,7 @@ function launch(def: LevelDef): void {
 function startChapter(): void {
   current = selected;
   battle = null;
+  external = null;
   launch(LEVELS[current]);
 }
 
@@ -385,15 +405,26 @@ function setPaused(on: boolean): void {
       ? battle.kind === "attack"
         ? "Se retirer compte pour une défaite : la province n'est pas prise et le tour est perdu."
         : "Se retirer compte pour une défaite : la province tombe."
-      : "La partie est en pause.";
-    $("pause-quit").textContent = battle ? "Se retirer" : "Quitter";
+      : external
+        ? "Se retirer compte pour une défaite : la région n'est pas prise et des troupes sont perdues."
+        : "La partie est en pause.";
+    $("pause-quit").textContent = battle || external ? "Se retirer" : "Quitter";
   }
 }
 
 /** Quitter depuis la pause : un chapitre revient au menu ; une bataille de campagne est une défaite. */
 function quitBattle(): void {
+  if (external) return endExternal(false);
   if (!battle || !camp) return showMenu();
   finishCampaignBattle(false, state?.time ?? 0, false);
+}
+
+/** Rend la main à l'écran qui avait lancé la bataille. */
+function endExternal(won: boolean): void {
+  const done = external;
+  external = null;
+  running = false;
+  done?.(won);
 }
 
 /* ---------- résultat d'une bataille ---------- */
@@ -404,7 +435,7 @@ function showResult(): void {
   const won = s.winner === PLAYER;
   const inCampaign = battle !== null && camp !== null;
   if (inCampaign) finishCampaignBattle(won, s.time, true);
-  else if (won) markDone(current);
+  else if (won && !external) markDone(current);
   $("hero").innerHTML = heroSvg(won);
   $("ribbon").className = `ribbon${won ? "" : " lose"}`;
   const attack = battle?.kind === "attack";
@@ -426,6 +457,13 @@ function showResult(): void {
   next.textContent = inCampaign ? "Continuer" : "Chapitre suivant";
   $("replay").hidden = inCampaign;
   $("to-menu").hidden = inCampaign;
+  if (external) {
+    $("result").textContent = won ? "Région prise !" : "Repoussé";
+    next.hidden = false;
+    next.textContent = "Continuer";
+    $("replay").hidden = true;
+    $("to-menu").hidden = true;
+  }
   if (won) launchConfetti($("confetti"));
   else $("confetti").replaceChildren();
   setMode("result");
@@ -814,6 +852,7 @@ function toggleAuto(id: number): void {
 }
 
 canvas.addEventListener("pointerdown", (e) => {
+  if (mode === "world") return world.down(e);
   if (mode === "pick" && picking) {
     const p = toWorld(e);
     const margin = (CAMPAIGN_WORLD.w - MAP.width) / 2;
@@ -838,9 +877,11 @@ canvas.addEventListener("pointerdown", (e) => {
   }
 });
 canvas.addEventListener("pointermove", (e) => {
+  if (mode === "world") return world.move(e, view);
   if (drag) Object.assign(drag, toWorld(e));
 });
 canvas.addEventListener("pointerup", (e) => {
+  if (mode === "world") return world.up(e, view);
   if (!drag || !state) return;
   const p = toWorld(e);
   const target = baseAt(p.x, p.y);
@@ -860,6 +901,7 @@ $("auto-toggle").addEventListener("click", toggleAutoMode);
 $("play").addEventListener("click", startChapter);
 $("replay").addEventListener("click", startChapter);
 $("next").addEventListener("click", () => {
+  if (external) return endExternal(state?.winner === PLAYER);
   if (pending) return afterBattle();
   selected = Math.min(current + 1, LEVELS.length - 1);
   showMenu();
@@ -913,6 +955,17 @@ $("missions-ok").addEventListener("click", () => ($("missions").hidden = true));
 $("camp-threats").addEventListener("click", () => camp && selectProvince(threatsOnCrown(camp)[0]?.target ?? null));
 $("chr-ok").addEventListener("click", afterChronicle);
 window.addEventListener("resize", layout);
+canvas.addEventListener("wheel", (e) => mode === "world" && world.wheel(e), { passive: true });
+$("tab-world").addEventListener("click", () => {
+  tab = "world";
+  showMenu();
+});
+$("w-continue").addEventListener("click", () => world.saved() && world.open(false));
+$("w-new").addEventListener("click", () => {
+  if (world.saved() && !window.confirm("Une partie Monde est en cours. La remplacer par une nouvelle ?")) return;
+  world.open(true);
+});
+$("world-back").addEventListener("click", showMenu);
 
 /* ---------- affichage ---------- */
 
@@ -977,6 +1030,12 @@ function frame(now: number): void {
   }
   if (!running || paused) acc = 0;
 
+  if (onWorldMap()) {
+    world.draw(ctx, view, mode === "menu");
+    requestAnimationFrame(frame);
+    return;
+  }
+
   if (onCampaignMap()) {
     const c = mode === "menu" ? preview : mode === "pick" ? pickBoard : camp;
     if (c) {
@@ -1014,6 +1073,19 @@ function frame(now: number): void {
   drawScene(ctx, view, shown, drag?.from.id ?? null, shown && running && !paused ? previewOf(shown) : null, marks);
   requestAnimationFrame(frame);
 }
+
+const world = createWorldScreen({
+  playBattle(def, done) {
+    battle = null;
+    external = done;
+    launch(def);
+  },
+  show() {
+    running = false;
+    setMode("world");
+  },
+  layout,
+});
 
 applyTheme();
 autoThreshold = Number(store(KEY_AUTO) ?? 0);

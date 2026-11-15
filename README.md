@@ -8,9 +8,13 @@ Les batailles se jouent sur une **carte de territoires** façon mappemonde : des
 
 ## Campagne « histoire de France »
 
-Onglet **Campagne** du menu. Une carte par tours des 26 provinces d'Ancien Régime : en 1180 la Couronne ne tient que trois provinces, à toi de reconstruire le royaume. Les attaques adverses sont **annoncées un tour à l'avance** (flèches) : à chaque tour tu choisis une bataille, **attaquer** une province ou **défendre** une province menacée ; le reste se résout sans toi. Tu gagnes de l'or (revenu, butin, missions) pour poser des **forteresses**. Deux scénarios (5 provinces, ou toute la France), trois difficultés, sauvegarde automatique. Détail, découpage et mesures : `DESIGN.md`.
+Onglet **Campagne** du menu. Une carte par tours des 26 provinces d'Ancien Régime : en 1180 la Couronne ne tient que trois provinces, à toi de reconstruire le royaume. Les attaques adverses sont **annoncées un tour à l'avance** (flèches) : à chaque tour tu choisis une bataille, **attaquer** une province ou **défendre** une province menacée ; le reste se résout sans toi. Tu gagnes de l'or (revenu, butin, missions) pour poser des **forteresses**. Deux scénarios (5 provinces, ou toute la France), cinq difficultés, sauvegarde automatique. Détail, découpage et mesures : `DESIGN.md`.
 
 Les provinces sont construites en fusionnant des départements actuels (`tools/build-france.py`, nécessite `pip install shapely`, génère `src/data/france.json`). Le tableau départements → provinces est approximatif et les dates historiques (`src/campaign/france.ts`) sont à vérifier.
+
+## Campagne Monde (tranche 1)
+
+Onglet **Monde**. Europe de l'Ouest en 3000 av. J.-C. : 28 régions naturelles, sans royaumes. Tu choisis ta région, tu envoies une part de tes troupes sur une voisine, tu **joues** la bataille ou tu la **résous** avec la chance affichée (tirée du rapport de forces, plafonnée à 90 %). Le temps avance à chaque tour selon la période (50 ans au début), que tu conquières ou non. Les régions, les peuples et les chiffres sont des abstractions de jeu : aucune donnée historique n'est encore intégrée. Détail : `docs/WORLD_CAMPAIGN.md`, `docs/WORLD_ROADMAP.md`, `docs/HISTORICAL_DATA_POLICY.md`.
 
 ## Style
 
