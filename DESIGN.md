@@ -227,3 +227,10 @@ La carte jointe par Paul montre des **provinces historiques** (Flandre-Artois, G
 - « Grand royaume » (12 provinces) : arbalétriers, les territoires du joueur résistent ×1,25 aux assauts (`GameState.defenseMul`). « France » (20) : artillerie, ses assauts frappent ×1,25 (`attackMul`). Les bonus se cumulent avec la cavalerie. Valeurs au jugé, aucune mesure d'équilibre ; seul le joueur en profite, donc la fin de campagne devient plus facile.
 - Ces deux unités n'ont pas de dessin propre sur la carte de bataille (seule la cavalerie en a un).
 - `jouer.bat` (installe si besoin, lance et ouvre le navigateur) et `mettre-a-jour.bat` (git pull, npm install, puis jouer). Écrits sans pouvoir être exécutés ici (Linux) : à valider sous Windows.
+
+## Refonte pixel art, tranche 1 (batailles) et jeu en un fichier
+
+- `Conquete.html` : tout le jeu dans un seul fichier (code, styles, polices), jouable par double-clic sans Node ni réseau. Généré par `npm run build:single`, donc à régénérer à chaque changement ; vérifié en `file://` (sauvegarde comprise). Committer `node_modules` a été écarté : les binaires d'esbuild dépendent du système.
+- Sprites en pixel art dessinés dans le code (`src/pixel.ts`, sans asset) : hutte / bourg / château selon le palier, garnison sur un cartouche, minions qui marchent en colonne (cavaliers avec la cavalerie, canon en tête avec l'artillerie, pavois près des bâtiments avec les arbalétriers).
+- Combats plus lisibles : le moteur trace chaque assaut (`GameState.hits`) ; l'affichage secoue le bâtiment, projette des éclats aux couleurs de l'assaillant, fait monter le chiffre de dégâts et marque la capture (« PRIS ! », anneau blanc). L'interception devient une explosion de pixels.
+- Pas encore en pixel art : les territoires, le décor, la carte de campagne, les menus et l'écran de fin. Les règles du combat n'ont pas changé.

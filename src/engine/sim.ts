@@ -3,6 +3,7 @@ import { type Base, type Edge, type GameState, type OwnerId, NEUTRAL, type Squad
 export const SQUAD_SPEED = 14; // unités monde / seconde
 export const PRODUCTION_PER_CAPACITY = 0.025; // troupes / s / point de capacité
 export const SEND_RATIO = 0.5;
+export const HIT_FLASH = 0.9; // secondes d'affichage d'un assaut
 export const FIGHT_FLASH = 0.8; // secondes d'affichage d'une interception
 
 /** Fatigue d'empire : au-delà de FATIGUE_FREE territoires, chacun produit un peu moins (anti-boule de neige). */
@@ -41,6 +42,7 @@ export function createState(bases: Omit<Base, "id">[], edges?: Edge[]): GameStat
     seaLinks: [],
     squads: [],
     fights: [],
+    hits: [],
     time: 0,
     nextSquadId: 1,
     productionMul: {},
@@ -125,11 +127,14 @@ function arrive(s: GameState, base: Base, squad: Squad): void {
   }
   // chaque assaillant vaut `power` défenseurs : l'artillerie l'augmente, les arbalétriers d'en face le réduisent
   const power = (s.attackMul[squad.owner] ?? 1) / (s.defenseMul[base.owner] ?? 1);
+  const hit = { base: base.id, t: s.time, amount: Math.min(base.troops, squad.count * power), by: squad.owner, captured: false };
   base.troops -= squad.count * power;
   if (base.troops < 0) {
     base.owner = squad.owner;
     base.troops = -base.troops / power; // les survivants, comptés en assaillants
+    hit.captured = true;
   }
+  s.hits.push(hit);
 }
 
 /** Interception : deux troupes ennemies qui se croisent sur une même frontière s'annulent. */
@@ -152,6 +157,7 @@ export function step(s: GameState, dt: number): void {
   if (s.winner !== null) return;
   s.time += dt;
   s.fights = s.fights.filter((f) => s.time - f.t < FIGHT_FLASH);
+  s.hits = s.hits.filter((h) => s.time - h.t < HIT_FLASH);
 
   const owned: Record<OwnerId, number> = {};
   for (const b of s.bases) if (b.owner !== NEUTRAL) owned[b.owner] = (owned[b.owner] ?? 0) + 1;

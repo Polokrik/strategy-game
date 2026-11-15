@@ -1,5 +1,6 @@
-import { FIGHT_FLASH } from "./engine/sim";
+import { FIGHT_FLASH, HIT_FLASH } from "./engine/sim";
 import { type Base, type GameState, NEUTRAL, type Point } from "./engine/types";
+import { BASE_PALETTE, BUILDINGS, CANNON, MINION, RIDER, SHIELD, blit, sprite } from "./pixel";
 import { FONT_BODY, GOLD, INK, OWNER, SEA } from "./theme";
 
 export interface View {
@@ -198,35 +199,54 @@ function drawSeaLinks(ctx: CanvasRenderingContext2D, s: GameState): void {
   ctx.setLineDash([]);
 }
 
-/** Positions des disques d'un amas : le principal au centre, les autres en grappe, comme des quartiers. */
-const CLUSTER: [number, number, number][] = [
-  [5.6, 7.2, -3.4],
-  [3.4, 3.8, 6.2],
-];
+const BUILDING_PX = 0.85;
 
-function drawMarker(ctx: CanvasRenderingContext2D, b: Base): void {
+/** Couleurs d'un camp pour les sprites : h/r = foncé, b/w = clair, f = fanion. */
+const paletteOf = (owner: number) => {
+  const t = tone(owner);
+  const neutral = owner === NEUTRAL;
+  return { ...BASE_PALETTE, h: t.dark, r: neutral ? "#a39a84" : t.dark, b: t.fill, w: "#fbf7ea", f: neutral ? "#a39a84" : t.dark };
+};
+
+/** Secousse d'un territoire qui vient d'être frappé : quelques pixels, vite amortis. */
+function shakeOf(s: GameState, id: number): number {
+  let x = 0;
+  for (const h of s.hits) {
+    if (h.base !== id) continue;
+    const age = s.time - h.t;
+    if (age < 0.3) x += Math.sin(age * 70) * (1 - age / 0.3) * 1.1;
+  }
+  return x;
+}
+
+/** Un territoire : son bâtiment en pixel art (hutte, bourg, château selon le palier) et sa garnison sur un cartouche. */
+function drawMarker(ctx: CanvasRenderingContext2D, s: GameState, b: Base): void {
   const t = tone(b.owner);
   const neutral = b.owner === NEUTRAL;
-  const n = tier(b);
-  const disc = (x: number, y: number, r: number) => {
-    ctx.beginPath();
-    ctx.arc(x, y, r, 0, Math.PI * 2);
-    ctx.fillStyle = neutral ? "#fff" : t.dark;
-    ctx.fill();
-    ctx.strokeStyle = neutral ? t.dark : "#fff";
-    ctx.lineWidth = 0.7;
-    ctx.stroke();
-  };
-  for (let i = 0; i < n - 1; i++) {
-    const [r, dx, dy] = CLUSTER[i];
-    disc(b.x + dx * (i ? -1 : 1), b.y + dy * (i ? 1 : -1) * 0.8, r * 0.62);
-  }
-  disc(b.x, b.y, 5.6);
+  const img = sprite(BUILDINGS[tier(b)], paletteOf(b.owner));
+  const x = b.x + shakeOf(s, b.id);
+  // ombre portée
+  ctx.fillStyle = "rgba(43,42,58,0.22)";
+  ctx.beginPath();
+  ctx.ellipse(x, b.y + 2.2, img.width * BUILDING_PX * 0.52, 1.6, 0, 0, Math.PI * 2);
+  ctx.fill();
+  blit(ctx, img, x, b.y + 2.6, BUILDING_PX);
+  if ((s.defenseMul[b.owner] ?? 1) > 1) blit(ctx, sprite(SHIELD, paletteOf(b.owner)), x + img.width * BUILDING_PX * 0.5 + 1, b.y + 2.6, 0.7);
+
+  // cartouche de garnison
+  const label = String(Math.floor(b.troops));
+  ctx.font = `700 5.6px ${FONT_BODY}`;
+  const w = Math.max(8.5, ctx.measureText(label).width + 4);
+  const top = b.y + 3.4;
+  ctx.fillStyle = neutral ? "#fff" : t.dark;
+  ctx.fillRect(x - w / 2, top, w, 6.6);
+  ctx.strokeStyle = neutral ? t.dark : "#fff";
+  ctx.lineWidth = 0.7;
+  ctx.strokeRect(x - w / 2, top, w, 6.6);
   ctx.fillStyle = neutral ? INK : "#fff";
-  ctx.font = `700 6.2px ${FONT_BODY}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  ctx.fillText(String(Math.floor(b.troops)), b.x, b.y + 0.3);
+  ctx.fillText(label, x, top + 3.6);
 }
 
 /** Territoire coché pour les renforts automatiques. */
@@ -282,83 +302,103 @@ function drawAutoBadge(ctx: CanvasRenderingContext2D, b: Base, flagged: boolean,
   }
 }
 
-/** Les troupes forment un flux de points : leur nombre se lit à l'œil, et deux flux qui se rencontrent s'annulent à la vue. */
+const MINION_PX = 0.6;
+
+/** Les troupes marchent en colonne de minions (cavaliers une fois la cavalerie acquise) : leur nombre se lit à l'œil. */
 function drawSquads(ctx: CanvasRenderingContext2D, s: GameState): void {
-  for (const q of s.squads) {
-    const t = tone(q.owner);
+  // les colonnes du bas passent devant celles du haut
+  for (const q of [...s.squads].sort((a, b) => a.y - b.y)) {
     const next = s.bases[q.path[0]];
     const len = Math.hypot(next.x - q.x, next.y - q.y) || 1;
     const dx = (next.x - q.x) / len;
     const dy = (next.y - q.y) / len;
-    const dots = Math.min(14, Math.max(2, Math.ceil(q.count / 2.5)));
     const mounted = (s.speedMul[q.owner] ?? 1) > 1;
-    for (let i = dots - 1; i >= 0; i--) {
-      const back = i * 1.95;
-      const side = (i % 2 ? 1 : -1) * 0.95;
-      const x = q.x - dx * back - dy * side;
-      const y = q.y - dy * back + dx * side;
-      ctx.beginPath();
-      if (mounted) ctx.ellipse(x, y, i === 0 ? 3.1 : 2.4, i === 0 ? 1.8 : 1.4, Math.atan2(dy, dx), 0, Math.PI * 2); // cavaliers : corps allongés
-      else ctx.arc(x, y, i === 0 ? 2.2 : 1.7, 0, Math.PI * 2);
-      ctx.fillStyle = t.dark;
-      ctx.fill();
-      ctx.strokeStyle = "#fff";
-      ctx.lineWidth = 0.45;
-      ctx.stroke();
+    const frames = mounted ? RIDER : MINION;
+    const pal = paletteOf(q.owner);
+    const n = Math.min(mounted ? 6 : 8, Math.max(1, Math.ceil(q.count / (mounted ? 5 : 4))));
+    const gap = mounted ? 4.6 : 3.3;
+    const members: { x: number; y: number; i: number }[] = [];
+    for (let i = 0; i < n; i++) {
+      const side = (i % 2 ? 1 : -1) * (n > 1 ? 1.5 : 0);
+      members.push({ x: q.x - dx * i * gap - dy * side, y: q.y - dy * i * gap + dx * side, i });
     }
-    if (mounted) {
-      // fanion en tête de colonne : une hampe et un triangle aux couleurs du camp
-      const hx = q.x + dx * 3.2;
-      const hy = q.y + dy * 3.2;
-      ctx.strokeStyle = INK;
-      ctx.lineWidth = 0.6;
+    members.sort((a, b) => a.y - b.y);
+    for (const m of members) {
+      const step = Math.floor(s.time * (mounted ? 9 : 7) + m.i * 0.5) % 2;
+      const hop = step ? 0 : 0.5;
+      ctx.fillStyle = "rgba(43,42,58,0.2)";
       ctx.beginPath();
-      ctx.moveTo(hx, hy);
-      ctx.lineTo(hx, hy - 5.5);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(hx, hy - 5.5);
-      ctx.lineTo(hx + 4.2, hy - 4);
-      ctx.lineTo(hx, hy - 2.6);
-      ctx.closePath();
-      ctx.fillStyle = t.fill;
+      ctx.ellipse(m.x, m.y + 2.6, mounted ? 3.2 : 2.2, 0.8, 0, 0, Math.PI * 2);
       ctx.fill();
-      ctx.strokeStyle = INK;
-      ctx.stroke();
+      blit(ctx, sprite(frames[step], pal), m.x, m.y + 2.8 - hop, MINION_PX, dx < 0);
     }
-    ctx.font = `700 4px ${FONT_BODY}`;
+    if ((s.attackMul[q.owner] ?? 1) > 1) blit(ctx, sprite(CANNON, pal), q.x + dx * 5, q.y + dy * 5 + 2.8, MINION_PX, dx < 0);
+
+    const label = String(q.count);
+    ctx.font = `700 4.4px ${FONT_BODY}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
-    ctx.lineWidth = 1.2;
+    ctx.lineWidth = 1.3;
     ctx.strokeStyle = "#fff";
-    ctx.strokeText(String(q.count), q.x + dy * 3.6 - dx * 1.5, q.y - dx * 3.6 - dy * 1.5);
+    ctx.strokeText(label, q.x, q.y - 5.4);
     ctx.fillStyle = INK;
-    ctx.fillText(String(q.count), q.x + dy * 3.6 - dx * 1.5, q.y - dx * 3.6 - dy * 1.5);
+    ctx.fillText(label, q.x, q.y - 5.4);
   }
 }
 
-/** Interception : une étoile de bande dessinée. */
+/** Assauts : éclats de pixels aux couleurs de l'assaillant, chiffre de dégâts qui s'envole, anneau blanc à la capture. */
+function drawHits(ctx: CanvasRenderingContext2D, s: GameState): void {
+  for (const h of s.hits) {
+    const b = s.bases[h.base];
+    const age = (s.time - h.t) / HIT_FLASH;
+    const t = tone(h.by);
+    ctx.globalAlpha = 1 - age * age;
+    for (let i = 0; i < 8; i++) {
+      const a = i * 0.785 + h.t * 3.1;
+      const d = 3 + age * (9 + (i % 3) * 3);
+      const size = 1.5 - age;
+      ctx.fillStyle = i % 2 ? t.dark : "#fff";
+      ctx.fillRect(b.x + Math.cos(a) * d - size / 2, b.y - 3 + Math.sin(a) * d * 0.7 - age * 3 - size / 2, size, size);
+    }
+    if (h.captured) {
+      const r = 6 + age * 12;
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 2 * (1 - age);
+      ctx.strokeRect(b.x - r, b.y - 2 - r * 0.75, r * 2, r * 1.5);
+    }
+    const label = h.captured ? "PRIS !" : `-${Math.max(1, Math.round(h.amount))}`;
+    ctx.font = `700 ${h.captured ? 5.4 : 5}px ${FONT_BODY}`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.lineWidth = 1.4;
+    ctx.strokeStyle = INK;
+    ctx.strokeText(label, b.x, b.y - 10 - age * 7);
+    ctx.fillStyle = h.captured ? GOLD : "#ff6b5c";
+    ctx.fillText(label, b.x, b.y - 10 - age * 7);
+    ctx.globalAlpha = 1;
+  }
+}
+
+/** Interception : une explosion en gros pixels, au point de rencontre des deux colonnes. */
 function drawFights(ctx: CanvasRenderingContext2D, s: GameState): void {
   for (const f of s.fights) {
     const age = (s.time - f.t) / FIGHT_FLASH;
-    const r = 3.2 + age * 4;
-    ctx.save();
-    ctx.translate(f.x, f.y);
-    ctx.rotate(age * 0.6);
     ctx.globalAlpha = 1 - age * age;
-    ctx.beginPath();
-    for (let i = 0; i < 16; i++) {
-      const rad = i % 2 ? r * 0.55 : r;
-      const a = (i / 16) * Math.PI * 2;
-      ctx.lineTo(Math.cos(a) * rad, Math.sin(a) * rad);
-    }
-    ctx.closePath();
+    const core = 3.4 * (1 - age);
+    ctx.fillStyle = INK;
+    ctx.fillRect(f.x - core - 0.6, f.y - core - 0.6, core * 2 + 1.2, core * 2 + 1.2);
     ctx.fillStyle = GOLD;
-    ctx.fill();
-    ctx.strokeStyle = INK;
-    ctx.lineWidth = 0.7;
-    ctx.stroke();
-    ctx.restore();
+    ctx.fillRect(f.x - core, f.y - core, core * 2, core * 2);
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(f.x - core / 2, f.y - core / 2, core, core);
+    for (let i = 0; i < 10; i++) {
+      const a = i * 0.628 + f.t * 2.3;
+      const d = 2.5 + age * (8 + (i % 3) * 3.5);
+      const size = 1.7 * (1 - age) + 0.3;
+      ctx.fillStyle = i % 3 === 0 ? "#fff" : i % 3 === 1 ? GOLD : "#ff6b5c";
+      ctx.fillRect(f.x + Math.cos(a) * d - size / 2, f.y + Math.sin(a) * d - size / 2, size, size);
+    }
+    ctx.globalAlpha = 1;
   }
 }
 
@@ -429,9 +469,10 @@ export function drawScene(
   drawTerritories(ctx, s, selected);
   drawSeaLinks(ctx, s);
   if (preview) drawPreview(ctx, preview);
-  for (const b of s.bases) drawMarker(ctx, b);
+  for (const b of [...s.bases].sort((a, b) => a.y - b.y)) drawMarker(ctx, s, b);
   for (const m of autoMarks) drawAutoBadge(ctx, s.bases[m.id], m.flagged, m.active);
   drawSquads(ctx, s);
+  drawHits(ctx, s);
   drawFights(ctx, s);
   ctx.restore();
 }

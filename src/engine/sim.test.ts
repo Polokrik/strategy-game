@@ -253,4 +253,14 @@ describe("artillerie et arbalétriers", () => {
     run(s, 5);
     expect(s.bases[1].owner).toBe(ENEMY);
   });
+  it("un assaut laisse une trace pour l'affichage, qui dit s'il a pris le territoire", () => {
+    const s = duel();
+    send(s, 0, 1, PLAYER, 0.25); // 5 assaillants contre 10
+    run(s, 2);
+    expect(s.bases[1].owner).toBe(ENEMY);
+    const first = duel();
+    send(first, 0, 1, PLAYER, 1);
+    for (let i = 0; i < 40 && first.hits.length === 0; i++) step(first, 0.1);
+    expect(first.hits[0]).toMatchObject({ base: 1, by: PLAYER, captured: true });
+  });
 });

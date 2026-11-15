@@ -39,6 +39,15 @@ export interface Fight {
   t: number;
 }
 
+/** Trace d'un assaut sur un territoire, pour l'affichage (éclats, chiffre de dégâts, capture). */
+export interface Hit {
+  base: number;
+  t: number;
+  amount: number;
+  by: OwnerId;
+  captured: boolean;
+}
+
 export interface GameState {
   bases: Base[];
   /** voisins de chaque territoire */
@@ -49,6 +58,7 @@ export interface GameState {
   seaLinks: Edge[];
   squads: Squad[];
   fights: Fight[];
+  hits: Hit[];
   time: number;
   nextSquadId: number;
   /** multiplicateur de production par camp (1 par défaut) */
