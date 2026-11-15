@@ -234,3 +234,9 @@ La carte jointe par Paul montre des **provinces historiques** (Flandre-Artois, G
 - Sprites en pixel art dessinés dans le code (`src/pixel.ts`, sans asset) : hutte / bourg / château selon le palier, garnison sur un cartouche, minions qui marchent en colonne (cavaliers avec la cavalerie, canon en tête avec l'artillerie, pavois près des bâtiments avec les arbalétriers).
 - Combats plus lisibles : le moteur trace chaque assaut (`GameState.hits`) ; l'affichage secoue le bâtiment, projette des éclats aux couleurs de l'assaillant, fait monter le chiffre de dégâts et marque la capture (« PRIS ! », anneau blanc). L'interception devient une explosion de pixels.
 - Pas encore en pixel art : les territoires, le décor, la carte de campagne, les menus et l'écran de fin. Les règles du combat n'ont pas changé.
+
+## Adaptation à l'écran
+
+- Deux mises en page. Portrait (téléphone) : carte en haut, commandes en bas, barre d'onglets toujours visible (c'est le contenu de l'onglet qui défile), contenu resserré sous 720 px de haut. Large (`orientation: landscape` et ≥ 560 px : PC, Mac, tablette, téléphone couché) : commandes dans une colonne à droite (`--side`, 280 à 400 px), carte sur tout le reste.
+- `mapInsets()` rend les quatre marges ; `isWide()` et `sideWidth()` portent la même règle que le CSS.
+- Vérifié sur captures à 1440×900, 1024×768, 800×380, 390×780 et 360×640. Limite connue : les cartes de bataille sont dessinées en hauteur (100×160) et n'occupent donc qu'une bande au milieu d'un écran large ; l'écran Escouade laisse la zone de carte vide en large.

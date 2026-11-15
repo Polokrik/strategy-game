@@ -137,29 +137,41 @@ const fmtTime = (t: number) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60
 const onCampaignMap = () => mode === "campaign" || mode === "chronicle" || mode === "pick" || (mode === "menu" && tab === "campaign");
 
 /** Zone du canvas laissée à la carte, en pixels CSS, selon ce que l'interface recouvre. */
-function mapInsets(): { top: number; bottom: number } {
-  if (mode === "menu") return { top: 74, bottom: $("menu-bottom").getBoundingClientRect().height + 20 };
-  if (mode === "campaign") {
-    const bottom = phase ? 70 : $("camp-panel").getBoundingClientRect().height + 20;
-    return { top: 112, bottom };
+/** Écran large (PC, tablette ou téléphone couché) : les commandes passent dans une colonne à droite, la carte prend le reste. */
+const isWide = () => window.matchMedia("(orientation: landscape) and (min-width: 560px)").matches;
+/** Largeur de la colonne de droite en écran large ; le CSS lit la même valeur dans --side. */
+const sideWidth = () => Math.round(Math.min(400, Math.max(280, window.innerWidth * 0.32)));
+
+function mapInsets(): { top: number; bottom: number; left: number; right: number } {
+  const height = (id: string) => $(id).getBoundingClientRect().height;
+  if (isWide()) {
+    const side = sideWidth() + 24;
+    if (mode === "menu") return { top: 16, bottom: 16, left: 12, right: side };
+    if (mode === "campaign") return { top: height("camp-hud") + 22, bottom: phase ? 70 : 16, left: 12, right: side };
+    if (mode === "pick") return { top: 64, bottom: 16, left: 12, right: side };
+    return { top: 62, bottom: 18, left: 12, right: $("dock").hidden ? 12 : side };
   }
-  if (mode === "pick") return { top: 74, bottom: $("camp-panel").getBoundingClientRect().height + 20 };
-  return { top: 62, bottom: $("dock").hidden ? 18 : $("dock").getBoundingClientRect().height + 24 };
+  if (mode === "menu") return { top: 74, bottom: height("menu-bottom") + 20, left: 0, right: 0 };
+  if (mode === "campaign") return { top: 112, bottom: phase ? 70 : height("camp-panel") + 20, left: 0, right: 0 };
+  if (mode === "pick") return { top: 74, bottom: height("camp-panel") + 20, left: 0, right: 0 };
+  return { top: 62, bottom: $("dock").hidden ? 18 : height("dock") + 24, left: 0, right: 0 };
 }
 
 function layout(): void {
   const dpr = window.devicePixelRatio || 1;
+  document.documentElement.style.setProperty("--side", `${sideWidth()}px`);
   canvas.width = Math.round(window.innerWidth * dpr);
   canvas.height = Math.round(window.innerHeight * dpr);
   const world = onCampaignMap() ? CAMPAIGN_WORLD : { w: WORLD_W, h: WORLD_H };
-  const { top, bottom } = mapInsets();
+  const { top, bottom, left, right } = mapInsets();
+  const areaW = Math.max(80, window.innerWidth - left - right) * dpr;
   const areaH = Math.max(80, window.innerHeight - top - bottom) * dpr;
-  const scale = Math.min(canvas.width / world.w, areaH / world.h);
+  const scale = Math.min(areaW / world.w, areaH / world.h);
   view = {
     w: canvas.width,
     h: canvas.height,
     scale,
-    offX: (canvas.width - world.w * scale) / 2,
+    offX: left * dpr + (areaW - world.w * scale) / 2,
     offY: top * dpr + (areaH - world.h * scale) / 2,
   };
 }
